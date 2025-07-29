@@ -13,15 +13,23 @@ dependencies = [
     "intake<2",
     "intake-xarray>=0.7.0",
     "ipfsspec>=0.5.3",
+    "ipykernel>=6.30.0",
+    "ipython>=9.4.0",
     "matplotlib>=3.10.3",
     "moist-thermodynamics>=0.0.1",
     "numpy>=2.3.2",
     "pandas>=2.3.1",
     "pytest>=8.4.1",
+    "requests>=2.32.0",
     "ruff>=0.12.5",
     "scipy>=1.16.1",
     "seaborn>=0.13.2",
     "xarray>=2025.7.1",
     "xhistogram>=0.3.2",
     "zarr>=3.1.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [
+  ".", "gate_vs_orcestra",
 ]
