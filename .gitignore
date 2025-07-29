@@ -1,0 +1,30 @@
+.DS_Store
+_build
+*.swp
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+*.log
+*.png
+*.pdf
+images/
+
+## cache
+.cache/
+**/cache/*
+**/.pytest_cache/
+
+
+# Environments
+.env
+.envrc
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# python
+**/.python-version

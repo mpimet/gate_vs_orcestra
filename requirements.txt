@@ -1,0 +1,23 @@
+bottleneck
+cartopy
+cmocean
+flox
+fsspec
+intake<2
+intake-xarray
+ipfsspec>=0.5.3
+matplotlib
+moist-thermodynamics
+numpy
+pandas
+scipy
+seaborn
+xarray
+xhistogram
+zarr
+
+
+
+## utility
+pytest
+ruff
