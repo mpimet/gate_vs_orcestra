@@ -7,7 +7,7 @@ import xarray as xr
 def hash_xr_var(da):
     return np.array(
         [
-            hashlib.sha256(str(entry).encode("ascii")).hexdigest()[-8:]
+            hashlib.sha256(str(entry).encode("ascii")).hexdigest()[:16]
             for entry in da.values
         ]
     )
