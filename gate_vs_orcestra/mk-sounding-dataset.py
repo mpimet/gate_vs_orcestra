@@ -235,7 +235,7 @@ def process_gate(fdir):
     sondes.attrs["title"] = "GATE phase 2 and 3 ship-soundings"
     sondes.attrs["license"] = "CC-BY-4.0"
     sondes.attrs["summary"] = (
-        f"GATE ship-soundings: processed {nbeg-nend} of {nbeg} files. "
+        f"GATE ship-soundings: processed {nbeg - nend} of {nbeg} files. "
         f"Processing conditional on files having a monotonic coordinate, or non-monotonic gaps smaller "
         f"than {zthresh} m which were then filled. Processed data is interpolated to {dz} m grid, with unit "
         f"conversion, supplemental variables, outliers parsed and meta data provided for traceability"
