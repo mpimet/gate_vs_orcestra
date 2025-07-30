@@ -2,6 +2,7 @@ import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
+from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 import glob
 
 #    'Accent':  A qualitative colormap with 8 distinct colors.
@@ -41,7 +42,6 @@ gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True, linewidth=1, color='
 gl.xlabels_top = False
 gl.ylabels_right = False
 
-from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 
 LONGITUDE_FORMATTER = LongitudeFormatter(zero_direction_label=True)
 LATITUDE_FORMATTER = LatitudeFormatter()
