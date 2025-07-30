@@ -7,7 +7,6 @@ import xarray as xr
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.pyplot as plt
 
 from matplotlib.path import Path
 from moist_thermodynamics import functions as mt
@@ -360,7 +359,7 @@ rs = rs1.mean(dim="sonde").coarsen(altitude=5, boundary="trim").mean()
 sns.set_context(context="talk")
 fig, ax = plt.subplots(1, 3, figsize=(10, 5), sharey=True)
 
-ylim = (0, 25000)
+ylim = (0, 17000)
 tlim = (294, 360)
 nlim = (0, 0.02)
 rlim = (0, 1)
@@ -460,7 +459,7 @@ plt.savefig("plots/sounding.pdf")
 # %%
 # -- plot differencex wrt GATE
 #
-ylim = (0, 15000)
+ylim = (0, 17000)
 tlim = (294, 360)
 nlim = (0, 0.02)
 rlim = (0, 1)
