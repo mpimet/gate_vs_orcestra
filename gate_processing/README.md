@@ -1,5 +1,6 @@
-GATE tape directories:
+# GATE tape directories:
 
+```
   1001-1400_19740706-19740716
   2.00.03.101-3.00.02.104_19740601-19740930
   2001-2600_19740714-19740817
@@ -16,26 +17,35 @@ GATE tape directories:
   5.36.02.101-5.36.02.104_19740601-19740930
   5.36.02.104-5.36.02.104_19740601-19740930
   5.36.02.104-5.60.02.102_19740601-19740930
+```
 
 For a content overview see GATE_tape_contents.pdf
 
-Meteor sonde data from 
-  3.00.02.104-3.31.02.101_19740601-19740930
+## Meteor sonde data from 
+
+* 3.00.02.104-3.31.02.101_19740601-19740930
 
   NetCDF conversion with GATE_Meteor_radiosonde.f90
 
-Other sonde data from
-  3.31.02.101-3.33.02.101_19740601-19740930
+## Other sonde data from
+
+* 3.31.02.101-3.33.02.101_19740601-19740930
 
   NetCDF conversion with GATE_other_radiosonde.f90
 
-Makefile.levante:
+## Makefile.levante:
 
-  for building GATE_other_radiosonde.x and 
-               GATE_Meteor_radiosonde.x
+  for building 
 
-GATEsort.sh
+* GATE_other_radiosonde.x
+* GATE_Meteor_radiosonde.x
+
+## GATEsort.sh
+
   shell script to sort content of tape directories
 
-positions.py
+## positions.py
+
   plots positions of radiosondes (map.png)
+
+
