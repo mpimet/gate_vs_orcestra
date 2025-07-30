@@ -1,0 +1,30 @@
+other: compile link
+compile: GATE_other_radiosonde.o GATE_Meteor_radiosonde.o
+link:    GATE_other_radiosonde.x GATE_Meteor_radiosonde.x
+
+NETCDFF_ROOT=/sw/spack-levante/netcdf-fortran-4.5.3-l2ulgp
+NETCDF_ROOT=/sw/spack-levante/netcdf-c-4.8.1-qk24yp
+
+NETCDF_INCLUDE=${NETCDFF_ROOT}/include
+NETCDF_LIB=${NETCDF_ROOT}/lib
+NETCDFF_LIB=${NETCDFF_ROOT}/lib
+
+FC=gfortran -cpp
+FFLAGS=-I${NETCDF_INCLUDE}
+
+LD=gfortran
+LDFLAGS=-Wl,-rpath=${NETCDF_ROOT}/lib -Wl,-rpath=${NETCDFF_ROOT}/lib -L ${NETCDF_LIB} -lnetcdf -L ${NETCDFF_LIB} -l netcdff
+
+GATE_other_radiosonde.o: GATE_other_radiosonde.f90
+	echo $FFLAGS
+	$(FC) ${FFLAGS} -c $<
+GATE_Meteor_radiosonde.o: GATE_Meteor_radiosonde.f90
+	echo $FFLAGS
+	$(FC) ${FFLAGS} -c $<
+GATE_other_radiosonde.x: GATE_other_radiosonde.o
+	$(LD) ${LDFLAGS} GATE_other_radiosonde.o -o GATE_other_radiosonde.x
+GATE_Meteor_radiosonde.x: GATE_Meteor_radiosonde.o
+	$(LD) ${LDFLAGS} GATE_Meteor_radiosonde.o -o GATE_Meteor_radiosonde.x
+
+clean:
+	rm GATE_*.mod GATE_*.o GATE_*.x
