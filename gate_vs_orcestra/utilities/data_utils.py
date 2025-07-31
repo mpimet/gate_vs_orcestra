@@ -15,21 +15,15 @@ def hash_xr_var(da):
 
 def open_dropsondes(cid):
     ds = xr.open_dataset(f"ipfs://{cid}", engine="zarr")
-    ds = (
-        ds.rename(
-            {
-                "aircraft_latitude": "launch_lat",
-                "aircraft_longitude": "launch_lon",
-                "aircraft_msl_altitude": "launch_altitude",
-            }
-        )
-        .reset_coords(["launch_altitude"])
-        .swap_dims({"sonde": "sonde_id"})
-    )
-    try:
-        return ds.swap_dims({"circle": "circle_id"})
-    except ValueError:
-        return ds
+    return ds.rename(
+        {
+            "aircraft_latitude": "launch_lat",
+            "aircraft_longitude": "launch_lon",
+            "aircraft_msl_altitude": "launch_altitude",
+            "lat": "latitude",
+            "lon": "longitude",
+        }
+    ).reset_coords(["launch_altitude"])
 
 
 def open_radiosondes(cid):
@@ -40,31 +34,34 @@ def open_radiosondes(cid):
                 "alt": "altitude",
                 "sounding": "sonde_id",
                 "flight_time": "bin_average_time",
+                "flight_lat": "latitude",
+                "flight_lon": "longitude",
                 "platform": "platform_id",
             }
         )
-        .reset_coords(["p", "flight_lat", "flight_lon", "bin_average_time"])
-        .swap_dims({"launch_time": "sonde_id"})
+        .reset_coords(["p", "latitude", "longitude", "bin_average_time", "sonde_id"])
+        .drop_dims(["nv"])
+        .swap_dims({"launch_time": "sonde"})
     )
 
 
 def open_gate(cid):
     ds = xr.open_dataset(f"ipfs://{cid}", engine="zarr")
-    ds = ds.assign_coords({"sonde_id": ("time", hash_xr_var(ds.time))})
     return (
         ds.rename(
             {
                 "alt": "altitude",
-                "lat_beg": "launch_lat",
-                "lon_beg": "launch_lon",
+                "lat_end": "launch_lat",
+                "lon_end": "launch_lon",
                 "ua": "u",
                 "va": "v",
                 "platforms": "platform_id",
                 "time": "launch_time",
             }
         )
+        .sel(launch_time=slice("1974-08-10", "1974-09-30"))
         .set_coords(["launch_lat", "launch_lon"])
-        .swap_dims({"launch_time": "sonde_id"})
+        .swap_dims({"launch_time": "sonde"})
     )
 
 
