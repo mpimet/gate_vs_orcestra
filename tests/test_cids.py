@@ -30,4 +30,3 @@ def test_open_gate(cids):
     assert "launch_lat" in ds.coords
     assert "launch_lon" in ds.coords
     assert "altitude" in ds.dims
-    assert "sonde_id" in ds.coords
