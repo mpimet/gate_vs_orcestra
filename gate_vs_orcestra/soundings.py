@@ -2,8 +2,6 @@
 # % pip install moist_thermodynamics
 # -------------
 # Define some functions for plotting and evaluating atmospheric soundings
-
-from prometheus_client import g
 import xarray as xr
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -177,16 +175,18 @@ def reformat_rs(ds):
     """
     ds = (
         ds.reset_coords("p", drop=False)
-        .reset_coords("flight_lat", drop=False)
-        .reset_coords("flight_lon", drop=False)
-        .reset_coords("flight_time", drop=False)
-        .rename_vars({"launch_lat": "latitude", "launch_lon": "longitude"})
-        .rename_dims({"alt": "altitude"})
-        .rename_vars({"alt": "altitude"})
         .swap_dims({"launch_time": "sounding"})
-        .rename_vars({"launch_time": "time"})
-        .rename_dims({"sounding": "sonde"})
-        .rename_vars({"sounding": "sonde"})
+        .rename_dims({"alt": "altitude","sounding": "sonde"})
+        .rename_vars(
+            {
+                "launch_lat": "latitude",
+                "launch_lon": "longitude",
+                "launch_time": "time",
+                "alt": "altitude",
+                "sounding": "sonde"
+            }
+        )
+        .reset_coords(["flight_lat", "flight_lon", "flight_time"], drop=False)
         .drop_vars("sonde")
     )
 
@@ -234,6 +234,7 @@ rapsodi = xr.open_zarr(
 gate = xr.open_zarr("ipfs://QmY44nwC5dNUnZYFs5h1XA4eJ24RioeS9mHzutnhgYmtzM").pipe(
     reformat_gs
 )
+rapsodi
 # %%
 # - localize data into different domains
 #
@@ -244,13 +245,13 @@ rs1 = sub_domain(rapsodi, gate_A)
 gs2 = sub_domain(gate, percusion_E)
 ds2 = sub_domain(beach, percusion_E)
 rs2 = sub_domain(rapsodi, percusion_E)
-
 # %%
 # - parameters for soundings
 #
 sfc_vals = {}
 sondes = {"gate": gs1, "rapsodi": rs1}
 for sset in ["gate", "rapsodi"]:
+    print (sset)
     xs = sondes[sset]
     P_sfc = xs.p.sel(altitude=slice(10, 50)).max(dim="altitude") + 100
     RH_sfc = xs.rh.sel(altitude=slice(0, 30)).max(dim="altitude")
@@ -774,5 +775,3 @@ ax.set_xlim(0, 12000)
 plt.legend()
 
 sns.despine(offset=10)
-
-# %%
