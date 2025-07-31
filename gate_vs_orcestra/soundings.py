@@ -3,6 +3,7 @@
 # -------------
 # Define some functions for plotting and evaluating atmospheric soundings
 
+from prometheus_client import g
 import xarray as xr
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -691,16 +692,23 @@ plt.savefig("plots/rh.pdf")
 sns.set_context(context="paper")
 fig, ax = plt.subplots(1, 1, figsize=(3, 3), sharey=True)
 
-ylim = (0, 15000)
-tlim = (296, 356)
+ylim = (0, 12000)
+tlim = (-1, 1)
 nlim = (0, 0.02)
 rlim = (0, 1)
 
-rs.theta.plot(ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="rapsodi", color="navy")
-ds.theta.plot(ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="beach", color="teal")
+y1 = rapsodi.mean(dim="sonde").theta
+y2 = beach.mean(dim="sonde").theta
+dy = y2[: len(y1)] - y1
+dy.plot(ax=ax, y="altitude", label="$\\Delta \\Theta$")
 
-ax.plot(gs.theta, gs.altitude, label="gate", color="orangered")
+y1 = rapsodi.mean(dim="sonde").ta
+y2 = beach.mean(dim="sonde").ta
+dy = y2[: len(y1)] - y1
+dy.plot(ax=ax, y="altitude", label="$\\Delta T$")
 
+ax.set_ylim(0, 12000)
+ax.set_xlim(-0.6, 0.6)
 ax.set_xlabel("$\\theta$ / K")
 ax.set_ylabel("altitude / m")
 
@@ -723,5 +731,48 @@ ax.set_xlim(-30, 10)
 
 sns.despine(offset=10)
 plt.savefig("plots/zonal-wind.pdf")
+# %%
+# - compare deviations in altitude coordinate from hydrostaticity
+#
+sns.set_context(context="paper")
+fig, ax = plt.subplots(1, 1, figsize=(5, 3), sharey=True)
+
+z_r = (
+    constants.gravity_earth
+    / rapsodi.mean(dim="sonde").ta
+    / (Rd + (Rv - Rd) * rapsodi.mean(dim="sonde").q)
+)
+z_b = (
+    constants.gravity_earth
+    / beach.mean(dim="sonde").ta
+    / (Rd + (Rv - Rd) * beach.mean(dim="sonde").q)
+)
+
+ddz_r = (
+    rapsodi.altitude.diff(dim="altitude")
+    + np.log(rapsodi.mean(dim="sonde").p).diff(dim="altitude")
+    / z_r.rolling(altitude=2).mean()
+)
+ddz_b = (
+    beach.altitude.diff(dim="altitude")
+    + np.log(beach.mean(dim="sonde").p).diff(dim="altitude")
+    / z_b.rolling(altitude=2).mean()
+)
+
+ddz_r.coarsen(altitude=10, boundary="trim").mean().plot(
+    color="navy", label=f"rapsodi {ddz_r.mean().values:.2f} m"
+)
+ddz_b.coarsen(altitude=10, boundary="trim").mean().plot(
+    color="teal", label=f"beach   {ddz_b.mean().values:.2f} m"
+)
+
+print(y1.mean().values)
+ax.set_ylabel("$\\mathrm{d}z + R\\overline{T}g^{-1} \\, \\mathrm{d} \\,\\ln p$ / m")
+ax.set_xlabel("altitude / m")
+ax.set_ylim(-0.15, 0.15)
+ax.set_xlim(0, 12000)
+plt.legend()
+
+sns.despine(offset=10)
 
 # %%
