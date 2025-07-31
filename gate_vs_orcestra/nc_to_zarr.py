@@ -11,7 +11,7 @@ numcodecs.blosc.set_nthreads(1)
 
 def process_gate(fdir):
     """
-    convert GATE sounding data provied in netcdf files to a gridded product
+    convert GATE sounding data from netcdf files to a gridded product
     """
     import moist_thermodynamics.constants as constants
     import moist_thermodynamics.saturation_vapor_pressures as svp
