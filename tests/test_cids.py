@@ -1,5 +1,5 @@
 import xarray as xr
-import gate_vs_orcestra.data_utils as data
+import gate_vs_orcestra.utilities.data_utils as data
 import pytest
 
 
