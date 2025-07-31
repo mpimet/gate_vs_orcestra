@@ -11,11 +11,7 @@ numcodecs.blosc.set_nthreads(1)
 
 def process_gate(fdir):
     """
-    Process the GATE sounding data from the specified directory.  This involves
-    flagging files with non-increasing altitudes, interpolating to radio-sonde
-    altitudes, and restructuring the dataset to follow naming and unit conventions.
-    The function also adds auxiliary variables and flags outliers based on specified
-    thresholds.
+    convert GATE sounding data provied in netcdf files to a gridded product
     """
     import moist_thermodynamics.constants as constants
     import moist_thermodynamics.saturation_vapor_pressures as svp
@@ -99,28 +95,9 @@ def process_gate(fdir):
     return sondes
 
 
-def summarize_platforms(gate: xr.Dataset):
-    """
-    Print a summary of the platforms in the gate dataset.
-    """
-    unique_platforms = np.unique(gate.platform_id.values)
-    print(f"Platforms in GATE dataset: {len(unique_platforms)}")
-    for platform in unique_platforms:
-        n = np.sum(gate.platform_id.values == platform)
-        print(f"{platform:10s} : {n:5d} sondes")
-    return
-
-
 # %%
 # - create gate sounding data
 #
 src = "/Users/m219063/work/data/orcestra/gate/sondes/"
 fname = "/Users/m219063/data/gate-radiosondes.zarr"
 process_gate(src).to_zarr(fname)
-# %%
-# - load and summarize gate sounding data
-#
-gate = xr.open_zarr(fname)
-unique_platforms = np.unique(gate.platform_id.values)
-summarize_platforms(gate)
-gate
