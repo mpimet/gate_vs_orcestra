@@ -12,6 +12,7 @@ import cmocean
 import cartopy.feature as cf
 
 import data_utils as data
+from settings_and_colors import colors
 
 # %%# %%
 reanalysis = data.open_reanalysis(chunks={}, zoom=7)
@@ -93,48 +94,43 @@ detrended_best = signal.detrend(
     .sel(year=slice(1974, None))
     .values
 )
-
+# %%
+std = np.nanstd(
+    np.concatenate([detrended_jra, detrended_merra, detrended_era, detrended_best])
+)
 
 # %%
-sns.color_palette("bright")
+plt.style.use("./gate.mplstyle")
 fig, ax = plt.subplots(figsize=(10, 5))
-ax.plot(era2tocean.year.sel(year=slice(1974, None)), detrended_era, label="ERA5")
-ax.fill_between(
+ax.plot(
     era2tocean.year.sel(year=slice(1974, None)),
-    -era2tocean.mean("cell").sel(year=slice(1974, None)).std("year").values,
-    era2tocean.mean("cell").sel(year=slice(1974, None)).std("year").values,
-    alpha=0.1,
-    color="k",
+    detrended_era,
+    label="ERA5",
+    color=colors["era"],
 )
-ax.plot(merra2tocean.year, detrended_merra, label="MERRA2")
-ax.fill_between(
-    merra2tocean.year,
-    -merra2tocean.mean("cell").std("year").values,
-    merra2tocean.mean("cell").std("year").values,
-    alpha=0.1,
-    color="k",
-)
-ax.plot(jra2tocean.sel(year=slice(1974, None)).year, detrended_jra, label="JRA3Q")
-ax.fill_between(
+
+ax.plot(merra2tocean.year, detrended_merra, label="MERRA2", color=colors["merra"])
+
+ax.plot(
     jra2tocean.sel(year=slice(1974, None)).year,
-    -jra2tocean.mean("cell").sel(year=slice(1974, None)).std("year").values,
-    jra2tocean.mean("cell").sel(year=slice(1974, None)).std("year").values,
-    alpha=0.1,
-    color="k",
+    detrended_jra,
+    label="JRA3Q",
+    color=colors["jra"],
 )
-ax.plot(best_summer.sel(year=slice(1974, None)).year, detrended_best, label="BEST")
-ax.fill_between(
+
+ax.plot(
     best_summer.sel(year=slice(1974, None)).year,
-    -best_summer.temperature.mean(dim=["latitude", "longitude"])
-    .sel(year=slice(1974, None))
-    .std("year")
-    .values,
-    best_summer.temperature.mean(dim=["latitude", "longitude"])
-    .sel(year=slice(1974, None))
-    .std("year")
-    .values,
-    alpha=0.1,
-    color="k",
+    detrended_best,
+    label="BEST",
+    color=colors["best"],
+)
+
+ax.fill_between(
+    np.array([1974, 2025]),
+    [-std, -std],
+    [std, std],
+    color="gray",
+    alpha=0.2,
 )
 
 
@@ -147,10 +143,24 @@ sns.despine(offset=10)
 xticks = ax.get_xticks()
 xticks = np.append(xticks, [1974, 2024])
 ax.set_xticks(xticks)
+yticks = np.concatenate([ax.get_yticks(), [-std, std]])
+ax.set_yticks(
+    [
+        tick
+        for tick in np.where(np.abs(np.abs(yticks) - 0.2) > 1e-3, yticks, np.nan)
+        if not np.isnan(tick)
+    ],
+    labels=[
+        f"{tick:.2f}"
+        for tick in np.where(np.abs(np.abs(yticks) - 0.2) > 1e-3, yticks, np.nan)
+        if not np.isnan(tick)
+    ],
+)
 ax.set_xlim(1973, 2025)
 fig.savefig(
     "images/sfc_temperature_anomaly.pdf",
 )
+
 # %%
 
 projection = ccrs.Robinson(central_longitude=10)

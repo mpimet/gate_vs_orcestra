@@ -3,7 +3,6 @@
 # -------------
 # Define some functions for plotting and evaluating atmospheric soundings
 
-from prometheus_client import g
 import xarray as xr
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -774,5 +773,3 @@ ax.set_xlim(0, 12000)
 plt.legend()
 
 sns.despine(offset=10)
-
-# %%
