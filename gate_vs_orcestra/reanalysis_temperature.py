@@ -11,8 +11,9 @@ import cartopy.crs as ccrs
 import cmocean
 import cartopy.feature as cf
 
-import data_utils as data
-from settings_and_colors import colors
+import utilities.data_utils as data
+
+from utilities.settings_and_colors import colors
 
 # %%# %%
 reanalysis = data.open_reanalysis(chunks={}, zoom=7)
