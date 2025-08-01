@@ -49,6 +49,8 @@ def interpolate_gaps(ds):
     ds = ds.assign(p=np.exp(ds.p))
     ds = ds.assign(
         ta=mt.theta2T(ds.theta, ds.p),
+    )
+    ds = ds.assign(
         rh=mt.specific_humidity_to_relative_humidity(ds.q, ds.p, ds.ta),
     )
 
@@ -62,7 +64,12 @@ def extrapolate_sfc(ds):
     """
     constant_vars = ["u", "v", "theta", "q"]
     ds = ds.assign(
-        **{var: ds[var].bfill("altitude", limit=30) for var in constant_vars}
+        **{
+            var: ds[var].interpolate_na(
+                dim="altitude", method="nearest", max_gap=300, fill_value="extrapolate"
+            )
+            for var in constant_vars
+        }
     )
     ds = ds.assign(
         p=np.exp(
@@ -73,6 +80,8 @@ def extrapolate_sfc(ds):
     )
     ds = ds.assign(
         ta=mt.theta2T(ds.theta, ds.p),
+    )
+    ds = ds.assign(
         rh=mt.specific_humidity_to_relative_humidity(ds.q, ds.p, ds.ta),
     )
     return ds
