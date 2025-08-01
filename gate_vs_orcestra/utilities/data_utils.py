@@ -87,9 +87,7 @@ def get_cids():
 
 
 def summarize_platforms(gate: xr.Dataset):
-    unique_platforms = np.unique(gate.platform_id.values)
+    unique_platforms, counts = np.unique(gate.platform_id.values, return_counts=True)
     print(f"Platforms in dataset: {len(unique_platforms)}")
-    for platform in unique_platforms:
-        n = np.sum(gate.platform_id.values == platform)
+    for platform, n in zip(unique_platforms, counts):
         print(f"{platform:10s} : {n:5d} sondes")
-    return
