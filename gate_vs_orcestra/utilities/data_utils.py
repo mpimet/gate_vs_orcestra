@@ -84,3 +84,10 @@ def get_cids():
         "radiosondes": f"{orcestra_main}/Radiosondes/RAPSODI_RS_ORCESTRA_level2.zarr",
         "dropsondes": f"{orcestra_main}/HALO/dropsondes/Level_3/PERCUSION_Level_3.zarr",
     }
+
+
+def summarize_platforms(gate: xr.Dataset):
+    unique_platforms, counts = np.unique(gate.platform_id.values, return_counts=True)
+    print(f"Platforms in dataset: {len(unique_platforms)}")
+    for platform, n in zip(unique_platforms, counts):
+        print(f"{platform:10s} : {n:5d} sondes")
