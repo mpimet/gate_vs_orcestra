@@ -18,7 +18,7 @@ dependencies = [
     "ipykernel",
     "ipython",
     "matplotlib",
-    "moist-thermodynamics",
+    "moist-thermodynamics>=0.0.4",
     "numpy",
     "pandas",
     "pytest",
