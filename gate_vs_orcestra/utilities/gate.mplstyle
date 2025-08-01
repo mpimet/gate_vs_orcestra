@@ -9,4 +9,4 @@ xtick.major.width : 1.5
 ytick.major.width : 1.5
 axes.spines.right : False
 axes.spines.top : False
-legend.fontsize : 16
+legend.fontsize : 12
