@@ -147,7 +147,7 @@ def process_gate(fdir):
         ),
     )
 
-    return sondes
+    return sondes.sortby("launch_time")
 
 
 # %%
