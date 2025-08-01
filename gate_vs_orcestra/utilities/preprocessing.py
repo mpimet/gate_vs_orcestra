@@ -1,8 +1,7 @@
 import numpy as np
 from matplotlib.path import Path
 from utilities.settings_and_colors import gate_A, percusion_E
-import moist_thermodynamics.constants as constants
-import moist_thermodynamics.saturation_vapor_pressures as svp
+import moist_thermodynamics.functions as mt
 
 
 def sel_sub_domain(
@@ -30,30 +29,6 @@ def sel_percusion_E(ds, **kwargs):
     return sel_sub_domain(ds, percusion_E, **kwargs)
 
 
-def theta_to_t(theta, p, qv=0, ql=0, qi=0):
-    """
-    Convert potential temperature to temperature.
-    """
-    Rd = constants.dry_air_gas_constant
-    Rv = constants.water_vapor_gas_constant
-    cpd = constants.isobaric_dry_air_specific_heat
-    cpv = constants.isobaric_water_vapor_specific_heat
-    cl = constants.liquid_water_specific_heat
-    ci = constants.frozen_water_specific_heat
-    P0 = constants.P0
-    qd = 1.0 - qv - ql - qi
-    kappa = (qd * Rd + qv * Rv) / (qd * cpd + qv * cpv + ql * cl + qi * ci)
-
-    return theta / ((P0 / p) ** kappa)
-
-
-def q_to_rh(q, p, T, es=svp.liq_wagner_pruss):
-    Rd = constants.dry_air_gas_constant
-    Rv = constants.water_vapor_gas_constant
-    x = es(T) * Rd / Rv / (p - es(T))
-    return q * (1 + x) / x
-
-
 def interpolate_gaps(ds):
     akima_vars = ["u", "v"]
     linear_vars = ["theta", "q", "p"]
@@ -72,7 +47,10 @@ def interpolate_gaps(ds):
         }
     )
     ds = ds.assign(p=np.exp(ds.p))
-    ds = ds.assign(ta=theta_to_t(ds.theta, ds.p), rh=q_to_rh(ds.q, ds.p, ds.ta))
+    ds = ds.assign(
+        ta=mt.theta2T(ds.theta, ds.p),
+        rh=mt.specific_humidity_to_relative_humidity(ds.q, ds.p, ds.ta),
+    )
 
     return ds
 
@@ -93,5 +71,8 @@ def extrapolate_sfc(ds):
             )
         )
     )
-    ds = ds.assign(ta=theta_to_t(ds.theta, ds.p), rh=q_to_rh(ds.q, ds.p, ds.ta))
+    ds = ds.assign(
+        ta=mt.theta2T(ds.theta, ds.p),
+        rh=mt.specific_humidity_to_relative_humidity(ds.q, ds.p, ds.ta),
+    )
     return ds
