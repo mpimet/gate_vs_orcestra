@@ -632,7 +632,7 @@ requires-dist = [
     { name = "ipykernel" },
     { name = "ipython" },
     { name = "matplotlib" },
-    { name = "moist-thermodynamics" },
+    { name = "moist-thermodynamics", specifier = ">=0.0.4" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "pytest" },
@@ -966,15 +966,15 @@ wheels = [
 
 [[package]]
 name = "moist-thermodynamics"
-version = "0.0.1"
+version = "0.0.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "scipy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/77/c4/720743f213ffe09ad45906c526463db3291e38c9825b95ff0705f1d0bab3/moist_thermodynamics-0.0.1.tar.gz", hash = "sha256:0ae8b8dfbfd5a7ab065c1b80960b53a796bc1905f04da94e1d40bd20101de52e", size = 15421, upload-time = "2024-11-12T16:45:42.42Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/42/ca/c5c6d4cc4aa573766be79b09734630d9b9f39671f129d171d8e0f53bf3bb/moist_thermodynamics-0.0.4.tar.gz", hash = "sha256:976d3e36ecd820cfea9381049858fc21d606ff6049ca87be240c883b183d3515", size = 943574, upload-time = "2025-08-01T10:02:57.434Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/02/b8/45f87aa11a01cb0fb2b4686f7fd1dc7e22c37576256c51382bcde4c253c6/moist_thermodynamics-0.0.1-py3-none-any.whl", hash = "sha256:c9921f20051738e6598cb3bbc4d88f32354e3d0f78a381fa23b0d52b0e6e5b60", size = 16542, upload-time = "2024-11-12T16:45:41.078Z" },
+    { url = "https://files.pythonhosted.org/packages/62/8f/db07f7b23e525710d51b610815527c47dd977d74543f22ec0b1302b97f4e/moist_thermodynamics-0.0.4-py3-none-any.whl", hash = "sha256:93fae972ddf100f28195b724f5a5a697d8ddaa02d7cf820f4d5933bcd6f76f85", size = 16599, upload-time = "2025-08-01T10:02:56.474Z" },
 ]
 
 [[package]]
