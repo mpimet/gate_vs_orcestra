@@ -87,7 +87,6 @@ def mask_unphysical(ds, max_alt=22000):
         mask2 = x["rh"].sel(altitude=slice(z1, z1 + 300)).max(axis=1) > 0.4
         mask3 = x["platform_id"] == "Meteor"
         bad_sondes = x.isel(sonde=(mask1 & mask2 & mask3))
-        xx = x.copy()
         mask1 = x.altitude < z1
         mask2 = x.altitude > z1 + 300
         x["rh"] = x["rh"].where(
