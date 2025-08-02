@@ -53,6 +53,7 @@ def fill_gaps(ds, max_igap=1500, max_egap=300):
     Interpolate large gaps, and fill remaining smaller gaps at the boundaries by extrapolating
     using nearest values.
     """
+
     if max_egap > max_igap:
         raise ValueError("extrapolation gaps must be smaller than interpolation gaps")
 
