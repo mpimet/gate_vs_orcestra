@@ -81,66 +81,63 @@ def process_gate(fdir):
         )
     )
 
-    sondes = (
-        sondes.assign(
-            p=(
-                sondes.p.dims,
-                (sondes.p * 100).values,
-                {
-                    "standard_name": "air_pressure",
-                    "units": "Pa",
-                    "long_name": "atmospheric pressure",
-                },
-            ),
-            q=(
-                sondes.q.dims,
-                (sondes.q / 1000).values,
-                {
-                    "standard_name": "specific_humidity",
-                    "units": "kg/kg",
-                    "long_name": "specific humidity",
-                },
-            ),
-            ta=(
-                sondes.ta.dims,
-                (sondes.ta + 273.15).values,
-                {
-                    "standard_name": "air_temperature",
-                    "units": "K",
-                    "long_name": "air temperature",
-                },
-            ),
-        )
-        .assign(
-            rh=(
-                sondes.q.dims,
-                mt.specific_humidity_to_relative_humidity(
-                    sondes.q, sondes.p, sondes.ta, es=es
-                ).values,
-                {
-                    "standard_name": "relative_humidity",
-                    "units": "'",
-                    "long_name": "relative humidity with respect to liquid",
-                    "description": "Wagner-Pruss saturation vapor pressure",
-                },
-            ),
-            theta=(
-                sondes.ta.dims,
-                mt.theta(sondes.ta, sondes.p).values,
-                {
-                    "standard_name": "air_potential_temperature",
-                    "units": "K",
-                    "long_name": "dry potential temperature",
-                },
-            ),
-        )
-        .set_coords(["launch_lat", "launch_lon"])
+    sondes = sondes.assign(
+        p=(
+            sondes.p.dims,
+            (sondes.p * 100).values,
+            {
+                "standard_name": "air_pressure",
+                "units": "Pa",
+                "long_name": "atmospheric pressure",
+            },
+        ),
+        q=(
+            sondes.q.dims,
+            (sondes.q / 1000).values,
+            {
+                "standard_name": "specific_humidity",
+                "units": "kg/kg",
+                "long_name": "specific humidity",
+            },
+        ),
+        ta=(
+            sondes.ta.dims,
+            (sondes.ta + 273.15).values,
+            {
+                "standard_name": "air_temperature",
+                "units": "K",
+                "long_name": "air temperature",
+            },
+        ),
     )
+    sondes = sondes.assign(
+        rh=(
+            sondes.q.dims,
+            mt.specific_humidity_to_relative_humidity(
+                sondes.q, sondes.p, sondes.ta, es=es
+            ).values,
+            {
+                "standard_name": "relative_humidity",
+                "units": "'",
+                "long_name": "relative humidity with respect to liquid",
+                "description": "Wagner-Pruss saturation vapor pressure",
+            },
+        ),
+        theta=(
+            sondes.ta.dims,
+            mt.theta(sondes.ta, sondes.p).values,
+            {
+                "standard_name": "air_potential_temperature",
+                "units": "K",
+                "long_name": "dry potential temperature",
+            },
+        ),
+    ).set_coords(["launch_lat", "launch_lon"])
 
     sondes.attrs = dict(
         creator_name="Bjorn Stevens",
         creator_email="bjorn.stevens@mpimet.mpg.de",
-        title="GATE phase 2 and 3 ship-soundings",
+        title="GATE Level2 Sounding Data",
         license="CC-BY-4.0",
         summary=(
             "GATE ship-soundings mapped to a uniform 10 m grid using the groupby_bins('alt' ... ).mean() "
@@ -154,5 +151,5 @@ def process_gate(fdir):
 # - create gate sounding data
 #
 src = "/Users/m219063/work/data/orcestra/gate/sondes/"
-fname = "/Users/m219063/data/gate-radiosondes.zarr"
+fname = "/Users/m219063/data/gate-l2.zarr"
 process_gate(src).to_zarr(fname)
