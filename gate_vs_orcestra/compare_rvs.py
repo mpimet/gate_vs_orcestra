@@ -16,7 +16,8 @@ beach = dus.open_dropsondes(
 rapsodi = dus.open_radiosondes(
     "ipfs://bafybeigensqyqxfyaxgyjhwn6ytdpi3i4sxbtffd4oc27zbimyro4hygjq"
 )
-gate = dus.open_gate("QmSckNEWYkNb1JGVgDUNoQptuE12Czn37WpKpV8pZ3QJiU")
+cids = dus.get_cids()
+gate = dus.open_gate(cids["gate"])
 
 platforms = np.unique(gate.platform_id.values).tolist()
 platforms.append("ALL")
@@ -54,4 +55,5 @@ for RV in platforms:
     sns.despine(offset=5)
     plt.suptitle(RV)
     plt.savefig(f"plots/{RV}_outliers.png", dpi=600)
+
 # %%
