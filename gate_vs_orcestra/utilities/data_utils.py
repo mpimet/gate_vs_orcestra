@@ -48,8 +48,7 @@ def open_radiosondes(cid):
 def open_gate(cid):
     ds = xr.open_dataset(f"ipfs://{cid}", engine="zarr")
     return (
-        ds
-        .set_coords(["launch_lat", "launch_lon", "launch_time"])
+        ds.set_coords(["launch_lat", "launch_lon", "launch_time"])
         .swap_dims({"sonde": "launch_time"})
         .sel(launch_time=slice("1974-08-10", "1974-09-30"))
         .swap_dims({"launch_time": "sonde"})
