@@ -62,13 +62,17 @@ gs2 = dpp.sel_percusion_E(gate)
 rs2 = dpp.sel_percusion_E(rapsodi)
 bs2 = dpp.sel_percusion_E(beach)
 
-gs1 = dpp.sel_percusion_E(gs2)
-rs1 = dpp.sel_percusion_E(rs2)
-bs1 = dpp.sel_percusion_E(bs2)
+gs1 = dpp.sel_gate_A(gs2)
+rs1 = dpp.sel_gate_A(rs2)
+bs1 = dpp.sel_gate_A(bs2)
 
 gs_bar = gs2.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
 rs_bar = rs2.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
 bs_bar = bs2.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
+
+gs1_bar = gs1.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
+rs1_bar = rs1.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
+bs1_bar = bs1.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
 
 # %%
 # - parameters for soundings
@@ -143,12 +147,12 @@ print(t_cp.quantile(0.35))
 # %%
 P = np.arange(100900.0, 4000.0, -500)
 
-r_consrv = mt_beta.mk_sounding_ds(P, T_orce, q_orce)
+o_consrv = mt_beta.mk_sounding_ds(P, T_orce, q_orce)
 g_consrv = mt_beta.mk_sounding_ds(P, T_gate, q_gate)
-r_pseudo = mt_beta.mk_sounding_ds(P, T_op02, q_op02, thx=mt.theta_e_bolton)
+p_pseudo = mt_beta.mk_sounding_ds(P, T_op02, q_op02, thx=mt.theta_e_bolton)
 o_pseudo = mt_beta.mk_sounding_ds(P, T_orce, q_orce, thx=mt.theta_e_bolton)
 g_pseudo = mt_beta.mk_sounding_ds(P, T_gate, q_gate, thx=mt.theta_e_bolton)
-r_wthice = mt_beta.mk_sounding_ds(P, T_orce, q_orce, integrate=True)
+o_wthice = mt_beta.mk_sounding_ds(P, T_orce, q_orce, integrate=True)
 g_wthice = mt_beta.mk_sounding_ds(P, T_gate, q_gate, integrate=True)
 
 # %%
@@ -239,13 +243,6 @@ sns.despine(offset=10)
 plt.savefig("plots/sounding.pdf")
 
 # %%
-halo_rh.quantile(0.5)
-TRH = rs_bar["ta"].where(rs_bar["ta"] < 273.15)
-RHice = svp.ice_wagner_etal(TRH) / svp.liq_wagner_pruss(TRH)
-TRH = gs_bar["ta"].where(gs_bar["ta"] < 273.15)
-RHice_g = svp.ice_wagner_etal(TRH) / svp.liq_wagner_pruss(TRH)
-
-# %%
 # -- plot differencex wrt GATE
 #
 ylim = (0, 17000)
@@ -253,18 +250,17 @@ tlim = (294, 360)
 nlim = (0, 0.02)
 rlim = (0, 1)
 dlim = (295, 355)
-x = pseudo["T"]
-x = x - pseudo_gate["T"].values
+x = r_pseudo["T"]
+x = x - g_pseudo["T"].values
 x = x.where(x > 0.01)
 
-y = pseudo02["T"]
-y = y - pseudo_gate["T"].values
+y = p_pseudo["T"]
+y = y - g_pseudo["T"].values
 y = y.where(y > 0.01)
 
-dtheta_rs = rs.theta - gs.theta
-dtheta_bs = bs.theta - gs.theta
-gs.altitude
-# %%
+dtheta_rs = rs_bar.theta - gs_bar.theta
+dtheta_bs = bs_bar.theta - gs_bar.theta
+
 sns.set_context("paper")
 fig, ax = plt.subplots(1, 1, figsize=(3, 4), sharey=True)
 
@@ -317,18 +313,14 @@ plt.savefig("plots/DeltaT.pdf")
 sns.set_context("paper")
 fig, ax = plt.subplots(1, 1, figsize=(3, 4), sharey=True)
 
-delta_bs = (
-    bs2.mean(dim="sonde").coarsen(altitude=5, boundary="trim").mean().theta - bs.theta
-)
 label = "beach"
+delta_bs = (bs1_bar.theta - bs_bar.theta)
 delta_bar_bs = delta_bs.sel(altitude=slice(0, 14000)).mean().values
 delta_bs.plot(ax=ax, y="altitude", ylim=ylim, label=label)
 delta_bs
 
-delta_rs = (
-    rs2.mean(dim="sonde").coarsen(altitude=5, boundary="trim").mean().theta - rs.theta
-)
 label = "rapsodi"
+delta_rs = (rs1_bar.theta - rs_bar.theta)
 delta_bar_rs = delta_rs.sel(altitude=slice(0, 14000)).mean().values
 delta_rs.plot(ax=ax, y="altitude", ylim=ylim, label=label)
 
@@ -445,37 +437,6 @@ ax[2].set_xticks([100000, np.round((x1 + x2) / 2, 2), 102000])
 
 sns.despine(offset=10)
 # %%
-# - plot relative humidity and rh vs ice
-#
-es_liq = svp.liq_analytic
-es_ice = svp.liq_analytic
-es = mt.make_es_mxd(es_liq=svp.liq_analytic, es_ice=svp.ice_analytic)
-
-rs_p = (rs.ta / rs.theta) ** (1 / kappa) * P0
-R = Rd + (Rv - Rd) * rs.q
-pv = rs.q * Rv / R * rs_p
-rh = pv / es(rs.ta)
-
-sns.set_context(context="paper")
-fig, ax = plt.subplots(1, 1, figsize=(3, 3), sharey=True)
-
-rh.plot(
-    y="altitude",
-    xlim=(0, 1),
-    ylim=(0, 23000),
-    label="ice-liq",
-    color="navy",
-    ls="dotted",
-)
-rs.rh.plot(y="altitude", xlim=(0, 1), ylim=(0, 23000), label="liq", color="navy")
-ax = plt.gca()
-ax.set_ylabel("altitude / m")
-ax.set_xlabel("RH")
-sns.despine(offset=10)
-plt.legend()
-
-plt.savefig("plots/rh.pdf")
-# %%
 # - plot theta profiles
 #
 sns.set_context(context="paper")
@@ -486,10 +447,9 @@ tlim = (296, 356)
 nlim = (0, 0.02)
 rlim = (0, 1)
 
-rs.theta.plot(ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="rapsodi", color="navy")
-bs.theta.plot(ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="beach", color="teal")
-
-ax.plot(gs.theta, gs.altitude, label="gate", color="orangered")
+rs_bar.theta.plot(ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="rapsodi", color="navy")
+bs_bar.theta.plot(ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="beach", color="teal")
+gs_bar.theta.plot(ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="beach", color="orangered")
 
 ax.set_xlabel("$\\theta$ / K")
 ax.set_ylabel("altitude / m")
@@ -504,16 +464,12 @@ plt.savefig("plots/theta.pdf")
 sns.set_context(context="paper")
 fig, ax = plt.subplots(1, 1, figsize=(3, 3), sharey=True)
 
-rs.u.plot(ax=ax, y="altitude", ylim=ylim, label="rapsodi", color="navy")
-gs.ua.plot(ax=ax, y="altitude", ylim=ylim, label="beach", color="orangered")
-bs.u.plot(ax=ax, y="altitude", ylim=(0, 25000), label="gate", color="teal")
+rs_bar.u.plot(ax=ax, y="altitude", ylim=ylim, label="rapsodi", color="navy")
+gs_bar.u.plot(ax=ax, y="altitude", ylim=ylim, label="beach", color="orangered")
+bs_bar.u.plot(ax=ax, y="altitude", ylim=(0, 25000), label="gate", color="teal")
 ax.set_xlabel("$u$ / ms$^{-1}$")
 ax.set_ylabel("altitude / m")
-ax.set_xlim(-30, 10)
+ax.set_xlim(-23, 7)
 
 sns.despine(offset=10)
 plt.savefig("plots/zonal-wind.pdf")
-
-# %%
-print(np.sqrt(10 * 3 / 1000 / 300))
-# %%
