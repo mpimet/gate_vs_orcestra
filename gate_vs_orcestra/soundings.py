@@ -39,10 +39,14 @@ halo = (
     .set_coords(({"latitude", "longitude", "altitude"}))
 ).pipe(dpp.sel_percusion_E, item_var="TIME", lon_var="longitude", lat_var="latitude")
 
-hal = halo.swap_dims({"TIME": "altitude"}).sortby("altitude").sel(altitude=slice(14300,None))
-halo_rh = halo.RELHUM.where(halo.RELHUM<70,drop=True)/100.
-x = hal.swap_dims({"altitude":"TIME"})
-zbar   = x.altitude.mean().values
+hal = (
+    halo.swap_dims({"TIME": "altitude"})
+    .sortby("altitude")
+    .sel(altitude=slice(14300, None))
+)
+halo_rh = halo.RELHUM.where(halo.RELHUM < 70, drop=True) / 100.0
+x = hal.swap_dims({"altitude": "TIME"})
+zbar = x.altitude.mean().values
 # %%
 # - load data
 #
@@ -130,12 +134,12 @@ z0_gate = (
 print(
     f"Freezing levels:\n ORCESTRA radiosondes {z0_rs:.1f}m,\n ORCESTRA dropsondes {z0_bs:.1f}m,\n GATE {z0_gate[0]:.1f}m"
 )
-#%%
-z_cpt = rs1['ta'].idxmin(dim='altitude')
+# %%
+z_cpt = rs1["ta"].idxmin(dim="altitude")
 z_cpt.plot.hist(bins=100)
 
-t_cp = rs1['ta'].min(dim='altitude')
-print (t_cp.quantile(0.35))
+t_cp = rs1["ta"].min(dim="altitude")
+print(t_cp.quantile(0.35))
 # %%
 P = np.arange(100900.0, 4000.0, -500)
 
@@ -171,12 +175,26 @@ rs_bar.rh.plot(c="navy", ls="-", **kwargs)
 bs_bar.rh.plot(c="teal", ls="-", **kwargs)
 gs_bar.rh.plot(c="orangered", ls="-", **kwargs)
 
-ax[1].plot([halo_rh.quantile(.34),halo_rh.quantile(.65)],[zbar,zbar],lw=2.5,c='k',label = 'HALO 35 to 65')
-ax[1].plot([halo_rh.quantile(0.1),halo_rh.quantile(0.9)],[zbar,zbar],lw=0.5,c='k',label = 'HALO 0 to 90')
-ax[1].plot([halo_rh.quantile(.49),halo_rh.quantile(.51)],[zbar,zbar],lw=2.5,c='w')
+ax[1].plot(
+    [halo_rh.quantile(0.34), halo_rh.quantile(0.65)],
+    [zbar, zbar],
+    lw=2.5,
+    c="k",
+    label="HALO 35 to 65",
+)
+ax[1].plot(
+    [halo_rh.quantile(0.1), halo_rh.quantile(0.9)],
+    [zbar, zbar],
+    lw=0.5,
+    c="k",
+    label="HALO 0 to 90",
+)
+ax[1].plot(
+    [halo_rh.quantile(0.49), halo_rh.quantile(0.51)], [zbar, zbar], lw=2.5, c="w"
+)
 ax[1].legend(fontsize=9)
 
-RHice.plot(c="navy",ls='dotted',**kwargs,label='ice saturated')
+RHice.plot(c="navy", ls="dotted", **kwargs, label="ice saturated")
 ax[1].legend(fontsize=9)
 
 kwargs = {"ax": ax[2], "y": "altitude", "ylim": ylim, "xlim": (0, 0.02)}
@@ -212,8 +230,8 @@ ax[0].set_yticks(np.arange(0, 18001, 3000))
 ax[1].set_xlabel("RH")
 ax[1].set_ylabel("")
 
-ax[1].set_yticks([z_cpt.quantile(.35),z_cpt.quantile(.35)],minor="True")
-ax[1].tick_params(axis='both', which='minor', colors='red')
+ax[1].set_yticks([z_cpt.quantile(0.35), z_cpt.quantile(0.35)], minor="True")
+ax[1].tick_params(axis="both", which="minor", colors="red")
 
 ax[0].legend(fontsize=10)
 fig.tight_layout()
@@ -221,11 +239,11 @@ sns.despine(offset=10)
 plt.savefig("plots/sounding.pdf")
 
 # %%
-halo_rh.quantile(.5)
-TRH = rs_bar["ta"].where(rs_bar["ta"]<273.15)
-RHice = svp.ice_wagner_etal(TRH)/svp.liq_wagner_pruss(TRH)
-TRH = gs_bar["ta"].where(gs_bar["ta"]<273.15)
-RHice_g = svp.ice_wagner_etal(TRH)/svp.liq_wagner_pruss(TRH)
+halo_rh.quantile(0.5)
+TRH = rs_bar["ta"].where(rs_bar["ta"] < 273.15)
+RHice = svp.ice_wagner_etal(TRH) / svp.liq_wagner_pruss(TRH)
+TRH = gs_bar["ta"].where(gs_bar["ta"] < 273.15)
+RHice_g = svp.ice_wagner_etal(TRH) / svp.liq_wagner_pruss(TRH)
 
 # %%
 # -- plot differencex wrt GATE
@@ -497,5 +515,5 @@ sns.despine(offset=10)
 plt.savefig("plots/zonal-wind.pdf")
 
 # %%
-print (np.sqrt(10*3/1000/300))
+print(np.sqrt(10 * 3 / 1000 / 300))
 # %%
