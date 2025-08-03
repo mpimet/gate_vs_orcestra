@@ -3,15 +3,19 @@
 # -------------
 # Define some functions for plotting and evaluating atmospheric soundings
 
+import utilities.data_utils as dus
+import utilities.preprocessing as dpp
+
 import xarray as xr
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
-from matplotlib.path import Path
 from moist_thermodynamics import functions as mt
 from moist_thermodynamics import saturation_vapor_pressures as svp
 from moist_thermodynamics import constants
+import utilities.mt_beta as mt_beta
+
 
 es = svp.liq_wagner_pruss
 P0 = constants.P0
@@ -19,230 +23,48 @@ Rd = constants.Rd
 Rv = constants.Rv
 
 kappa = constants.Rd / constants.cpd
-
-gate_A = np.array(
-    [
-        [-27.0, 6.5],
-        [-23.5, 5.0],
-        [-20.0, 6.5],
-        [-20.0, 10.5],
-        [-23.5, 12.0],
-        [-27.0, 10.5],
-    ]
-)
-
-percusion_E = np.array([[-34.0, 13.5], [-20.0, 13.5], [-20.0, 3.5], [-34.0, 3.5]])
-
-
-def get_n2(th, qv):
-    """Returns the Brunt-Vaisala frequeny for unsaturated air.
-
-    It assumes that the input are type xarray with their first coordinate being
-    altitude in meters, and that the air is no where saturated
-
-    Args:
-        th: potential temperature
-        qv: specific humidity
-    """
-
-    from moist_thermodynamics import constants
-
-    Rv = constants.water_vapor_gas_constant
-    Rd = constants.dry_air_gas_constant
-    g = constants.gravity_earth
-    R = Rd + (Rv - Rd) * qv
-    dlnthdz = np.log(th).differentiate(th.dims[0])
-    dqvdz = qv.differentiate(th.dims[0])
-
-    return np.sqrt(g * (dlnthdz + (Rv - Rd) / R * dqvdz))
-
-
-def get_adiabat(P, Tsfc=301.0, qsfc=17e-3, Tmin=190.0, thx=mt.theta_l, integrate=False):
-    """Returns the moist adiabat along a pressure dimension.
-
-    Cacluates the moist adiabate based either on an integration or a specified
-    isentrope with pressure as the vertical coordinate.
-
-    Args:
-        P: pressure
-        Tsfc: temperature at greatest pressure level
-        RH: relative humidity at greatest pressure level
-        Tmin: minimum temperature of adiabat
-        thx: function to calculate isentrope
-        integrate: determines if explicit integration will be used.
-    """
-
-    from moist_thermodynamics import constants
-    from moist_thermodynamics import saturation_vapor_pressures as svp
-
-    es = svp.liq_analytic
-    T0 = constants.T0
-    i4T = np.vectorize(mt.invert_for_temperature)
-
-    Tx = thx(Tsfc, P[0], qsfc)
-    TK = i4T(thx, Tx, P, qsfc)
-
-    if integrate:
-        es = mt.make_es_mxd(es_liq=svp.liq_analytic, es_ice=svp.ice_analytic)
-        dP = P[1] - P[0]
-        Ptop = P[-1] + dP
-        Tice, Py = mt.moist_adiabat(
-            Tsfc,
-            P[0],
-            Ptop,
-            dP,
-            qsfc,
-            cc=constants.ci,
-            lv=mt.sublimation_enthalpy,
-            es=es,
-        )
-        Tliq, Px = mt.moist_adiabat(
-            Tsfc,
-            P[0],
-            Ptop,
-            dP,
-            qsfc,
-            cc=constants.cl,
-            lv=mt.vaporization_enthalpy,
-            es=es,
-        )
-        TK = np.ones(len(Px)) * T0
-        TK[Tliq > T0] = Tliq[Tliq > T0]
-        TK[Tice < T0] = Tice[Tice < T0]
-
-    T = xr.DataArray(
-        np.maximum(TK, Tmin),
-        dims=("P",),
-        coords=[P],
-        attrs={"units": "K", "long_name": "air temperature", "symbol": "$T$"},
+# %%
+halo = (
+    xr.open_dataset(
+        "ipfs://bafybeif52irmuurpb27cujwpqhtbg5w6maw4d7zppg2lqgpew25gs5eczm",
+        engine="zarr",
     )
-
-    return T
-
-
-def hydrostatic_altitude(s):
-    """Returns height from hydrostatic integration of state
-
-    Hydrostatically integrates the thermodynamic state to derive an altitude
-    coordinate and then returns the state with this new variable as the
-    dimension
-
-    Args:
-       state: xarray dataset with P, T and q
-    """
-    from moist_thermodynamics import constants
-
-    Rv = constants.water_vapor_gas_constant
-    Rd = constants.dry_air_gas_constant
-    g = constants.gravity_earth
-
-    qbar = ((s.q + s.q.shift(P=+1)) / 2).isel(P=slice(1, None))
-    Tbar = ((s.T + s.T.shift(P=+1)) / 2).isel(P=slice(1, None))
-    dz = -(Rd + (Rv - Rd) * qbar) * Tbar * np.log(s.P).diff(dim="P") / g
-    altitude = xr.DataArray(
-        np.zeros(s.T.size),
-        dims=s.T.dims,
-        coords=s.T.coords,
-        attrs={"units": "m", "long_name": "altitude", "symbol": "$z$"},
+    .rename_vars(
+        {
+            "IRS_LAT": "latitude",
+            "IRS_LON": "longitude",
+            "IRS_ALT": "altitude",
+        }
     )
-    altitude.loc[{"P": s.P.isel(P=slice(1, None))}] = dz.cumsum()
+    .set_coords(({"latitude", "longitude", "altitude"}))
+).pipe(dpp.sel_percusion_E, item_var="TIME", lon_var="longitude", lat_var="latitude")
 
-    return altitude
-
-
-def p2z_coord(ds: xr.Dataset) -> xr.Dataset:
-    """
-    change from pressure to height coordinaes
-    """
-    return (
-        ds.assign_coords({"altitude": hydrostatic_altitude(ds)})
-        .swap_dims({"P": "altitude"})
-        .copy(deep=True)
-    )
-
-
-def sub_domain(ds, polygon):
-    """
-    select points from dataset that lie within the polygon
-    """
-    points = np.column_stack([ds.longitude.values, ds.latitude.values])
-    inside = Path(polygon).contains_points(points)
-    return ds.sel(sonde=inside)
-
-
-def reformat_rs(ds):
-    """
-    standarize naming for rapsodi data
-    """
-    ds = (
-        ds.reset_coords("p", drop=False)
-        .reset_coords("flight_lat", drop=False)
-        .reset_coords("flight_lon", drop=False)
-        .reset_coords("flight_time", drop=False)
-        .rename_vars({"launch_lat": "latitude", "launch_lon": "longitude"})
-        .rename_dims({"alt": "altitude"})
-        .rename_vars({"alt": "altitude"})
-        .swap_dims({"launch_time": "sounding"})
-        .rename_vars({"launch_time": "time"})
-        .rename_dims({"sounding": "sonde"})
-        .rename_vars({"sounding": "sonde"})
-        .drop_vars("sonde")
-    )
-
-    return ds
-
-
-def reformat_ds(ds):
-    """
-    standarize naming for beach data
-    """
-    ds = (
-        ds.rename_vars(
-            {"aircraft_latitude": "latitude", "aircraft_longitude": "longitude"}
-        )
-        .reset_coords("aircraft_msl_altitude", drop=False)
-        .rename_vars({"sonde_time": "time"})
-    )
-
-    return ds
-
-
-def reformat_gs(ds):
-    """
-    standarize naming for gate data
-    """
-    ds = (
-        ds.set_coords(["latitude", "longitude"])
-        .assign_coords({"sonde": ds.src})
-        .sel(time=slice("1974-08-10", "1974-09-30"))
-        .swap_dims({"time": "sonde"})
-        .drop_vars("sonde")
-    )
-    return ds
-
-
+hal = halo.swap_dims({"TIME": "altitude"}).sortby("altitude").sel(altitude=slice(14300,None))
+halo_rh = halo.RELHUM.where(halo.RELHUM<70,drop=True)/100.
+x = hal.swap_dims({"altitude":"TIME"})
+zbar   = x.altitude.mean().values
 # %%
 # - load data
 #
-beach = xr.open_zarr(
-    "ipfs://bafybeicb33v6ohezyhgq5rumq4g7ejnfqxzcpuzd4i2fxnlos5d7ebmi3m"
-).pipe(reformat_ds)
-rapsodi = xr.open_zarr(
-    "ipfs://bafybeigensqyqxfyaxgyjhwn6ytdpi3i4sxbtffd4oc27zbimyro4hygjq"
-).pipe(reformat_rs)
-gate = xr.open_zarr("ipfs://QmY44nwC5dNUnZYFs5h1XA4eJ24RioeS9mHzutnhgYmtzM").pipe(
-    reformat_gs
-)
+cids = dus.get_cids()
+beach = dus.open_dropsondes(cids["dropsondes"])
+rapsodi = dus.open_radiosondes(cids["radiosondes"])
+gate = dus.open_gate(cids["gate"])
+
 # %%
 # - localize data into different domains
 #
-gs1 = sub_domain(gate, gate_A)
-ds1 = sub_domain(beach, gate_A)
-rs1 = sub_domain(rapsodi, gate_A)
+gs2 = dpp.sel_percusion_E(gate)
+rs2 = dpp.sel_percusion_E(rapsodi)
+bs2 = dpp.sel_percusion_E(beach)
 
-gs2 = sub_domain(gate, percusion_E)
-ds2 = sub_domain(beach, percusion_E)
-rs2 = sub_domain(rapsodi, percusion_E)
+gs1 = dpp.sel_percusion_E(gs2)
+rs1 = dpp.sel_percusion_E(rs2)
+bs1 = dpp.sel_percusion_E(bs2)
+
+gs_bar = gs2.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
+rs_bar = rs2.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
+bs_bar = bs2.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
 
 # %%
 # - parameters for soundings
@@ -289,9 +111,9 @@ q_op02 = sfc_vals["rapsodi_p02"]["q"].values
 # %%
 # - zero-degree isotherms
 #
-z0_ds = (
-    ds1["altitude"]
-    .where((ds1.ta.mean(dim="sonde") < 273.15).compute(), drop=True)[0]
+z0_bs = (
+    bs1["altitude"]
+    .where((bs1.ta.mean(dim="sonde") < 273.15).compute(), drop=True)[0]
     .values
 )
 z0_rs = (
@@ -306,139 +128,76 @@ z0_gate = (
 )
 
 print(
-    f"Freezing levels:\n ORCESTRA radiosondes {z0_rs:.1f}m,\n ORCESTRA dropsondes {z0_ds:.1f}m,\n GATE {z0_gate[0]:.1f}m"
+    f"Freezing levels:\n ORCESTRA radiosondes {z0_rs:.1f}m,\n ORCESTRA dropsondes {z0_bs:.1f}m,\n GATE {z0_gate[0]:.1f}m"
 )
+#%%
+z_cpt = rs1['ta'].idxmin(dim='altitude')
+z_cpt.plot.hist(bins=100)
+
+t_cp = rs1['ta'].min(dim='altitude')
+print (t_cp.quantile(0.35))
 # %%
-# - create idealized soundings
-#
-P = np.arange(100900, 4000, -500)
+P = np.arange(100900.0, 4000.0, -500)
 
-TPq = xr.Dataset(
-    data_vars={
-        "T": (("P",), np.full(len(P), T_gate)),
-        "q": (("P",), np.full(len(P), q_gate)),
-    },
-    coords={
-        "P": ("P", P, {"units": "Pa", "long_name": "air pressure", "symbol": "$P$"})
-    },
-)
-TPq["T"].attrs = {"units": "K", "long_name": "Temperature", "symbol": "$T$"}
-TPq["q"].attrs = {"units": "Pa", "long_name": "air pressure", "symbol": "$P$"}
+r_consrv = mt_beta.mk_sounding_ds(P, T_orce, q_orce)
+g_consrv = mt_beta.mk_sounding_ds(P, T_gate, q_gate)
+r_pseudo = mt_beta.mk_sounding_ds(P, T_op02, q_op02, thx=mt.theta_e_bolton)
+o_pseudo = mt_beta.mk_sounding_ds(P, T_orce, q_orce, thx=mt.theta_e_bolton)
+g_pseudo = mt_beta.mk_sounding_ds(P, T_gate, q_gate, thx=mt.theta_e_bolton)
+r_wthice = mt_beta.mk_sounding_ds(P, T_orce, q_orce, integrate=True)
+g_wthice = mt_beta.mk_sounding_ds(P, T_gate, q_gate, integrate=True)
 
-TPq["T"] = get_adiabat(P, Tsfc=T_orce, qsfc=q_orce)
-consrv = TPq.pipe(p2z_coord)
-
-TPq["T"] = get_adiabat(P, Tsfc=T_gate, qsfc=q_gate)
-consrv_gate = TPq.pipe(p2z_coord)
-
-TPq["T"] = get_adiabat(P, Tsfc=T_op02, qsfc=q_op02, thx=mt.theta_e_bolton)
-pseudo02 = TPq.pipe(p2z_coord)
-
-TPq["T"] = get_adiabat(P, Tsfc=T_orce, qsfc=q_orce, thx=mt.theta_e_bolton)
-pseudo = TPq.pipe(p2z_coord)
-
-TPq["T"] = get_adiabat(P, Tsfc=T_gate, qsfc=q_gate, thx=mt.theta_e_bolton)
-pseudo_gate = TPq.pipe(p2z_coord)
-
-TPq["T"] = get_adiabat(P, Tsfc=T_orce.item(), qsfc=q_orce.item(), integrate=True)
-wthice = TPq.pipe(p2z_coord)
-
-TPq["T"] = get_adiabat(P, Tsfc=T_gate.item(), qsfc=q_gate.item(), integrate=True)
-wthice_gate = TPq.pipe(p2z_coord)
-
-for s in [consrv, pseudo, wthice]:
-    s["q"] = ds1.mean(dim="sonde").q.interp(altitude=s.altitude)
-    s["theta"] = s["T"] * (P0 / s["P"]) ** kappa
 # %%
 # - profiles
 #
-gs = gs1.mean(dim="sonde").coarsen(altitude=5, boundary="trim").mean()
-ds = ds1.mean(dim="sonde").coarsen(altitude=5, boundary="trim").mean()
-rs = rs1.mean(dim="sonde").coarsen(altitude=5, boundary="trim").mean()
-
 sns.set_context(context="talk")
 fig, ax = plt.subplots(1, 3, figsize=(10, 5), sharey=True)
 
-ylim = (0, 17000)
-tlim = (294, 360)
-nlim = (0, 0.02)
+ylim = (0, 19000)
 rlim = (0, 1)
 dlim = (295, 355)
 
-rs.theta.plot(ax=ax[0], y="altitude", ylim=ylim, xlim=tlim, label="rapsodi")
-ds.theta.plot(ax=ax[0], y="altitude", ylim=ylim, xlim=tlim, label="beach")
-gs.theta.plot(ax=ax[0], y="altitude", ylim=ylim, xlim=tlim, label="gate")
+kwargs = {"ax": ax[0], "y": "altitude", "ylim": ylim, "xlim": (294, 404)}
+rs_bar.theta.plot(c="navy", ls="-", label="rapsodi", **kwargs)
+bs_bar.theta.plot(c="teal", ls="-", label="beach", **kwargs)
+gs_bar.theta.plot(c="orangered", ls="-", label="gate", **kwargs)
 
-rs.rh.plot(ax=ax[1], y="altitude", ylim=ylim, xlim=rlim, label="rapsodi")
-ds.rh.plot(ax=ax[1], y="altitude", ylim=ylim, xlim=rlim, label="beach")
-gs.rh.plot(ax=ax[1], y="altitude", ylim=ylim, xlim=rlim, label="gate")
+r_pseudo["theta"].plot(c="grey", ls="--", label="pseudo", **kwargs)
+r_consrv["theta"].plot(c="lightgrey", ls="--", label="moist", **kwargs)
+r_wthice["theta"].plot(c="grey", ls=":", label="ice", **kwargs)
 
-get_n2(rs.theta, rs.q).plot(
-    ax=ax[2], y="altitude", ylim=ylim, xlim=nlim, label="rapsodi"
-)
-get_n2(ds.theta, ds.q).plot(ax=ax[2], y="altitude", ylim=ylim, xlim=nlim, label="beach")
-get_n2(gs.theta, gs.q).plot(ax=ax[2], y="altitude", ylim=ylim, xlim=nlim, label="beach")
+kwargs = {"ax": ax[1], "y": "altitude", "ylim": ylim, "xlim": (0, 1)}
+rs_bar.rh.plot(c="navy", ls="-", **kwargs)
+bs_bar.rh.plot(c="teal", ls="-", **kwargs)
+gs_bar.rh.plot(c="orangered", ls="-", **kwargs)
 
-pseudo["theta"].plot(
-    ax=ax[0],
-    y="altitude",
-    ylim=ylim,
-    xlim=tlim,
-    color="k",
-    ls="dashed",
-    lw="1",
-    label="pseudo",
+ax[1].plot([halo_rh.quantile(.34),halo_rh.quantile(.65)],[zbar,zbar],lw=2.5,c='k',label = 'HALO 35 to 65')
+ax[1].plot([halo_rh.quantile(0.1),halo_rh.quantile(0.9)],[zbar,zbar],lw=0.5,c='k',label = 'HALO 0 to 90')
+ax[1].plot([halo_rh.quantile(.49),halo_rh.quantile(.51)],[zbar,zbar],lw=2.5,c='w')
+ax[1].legend(fontsize=9)
+
+RHice.plot(c="navy",ls='dotted',**kwargs,label='ice saturated')
+ax[1].legend(fontsize=9)
+
+kwargs = {"ax": ax[2], "y": "altitude", "ylim": ylim, "xlim": (0, 0.02)}
+mt.get_n2(rs_bar.theta, rs_bar.q, rs_bar.altitude, axis=0).plot(
+    c="navy", ls="-", label="rapsodi", **kwargs
 )
-consrv["theta"].plot(
-    ax=ax[0],
-    y="altitude",
-    ylim=ylim,
-    xlim=tlim,
-    color="grey",
-    ls="dashed",
-    lw="1",
-    label="moist",
+mt.get_n2(bs_bar.theta, bs_bar.q, bs_bar.altitude).plot(
+    c="teal", ls="-", label="beach", **kwargs
 )
-wthice["theta"].plot(
-    ax=ax[0],
-    y="altitude",
-    ylim=ylim,
-    xlim=tlim,
-    color="grey",
-    ls="dotted",
-    lw="1",
-    label="moist w/ice",
+mt.get_n2(gs_bar.theta, gs_bar.q, gs_bar.altitude).plot(
+    c="orangered", ls="-", label="gate", **kwargs
 )
 
-get_n2(wthice["theta"], wthice["q"]).plot(
-    ax=ax[2],
-    y="altitude",
-    ylim=ylim,
-    xlim=nlim,
-    color="grey",
-    ls="dotted",
-    lw="1",
-    label="with ice",
+mt.get_n2(r_pseudo["theta"], r_pseudo["q"], r_pseudo["altitude"]).plot(
+    c="grey", ls="--", label="pseudo", **kwargs
 )
-get_n2(consrv["theta"], consrv["q"]).plot(
-    ax=ax[2],
-    y="altitude",
-    ylim=ylim,
-    xlim=nlim,
-    color="grey",
-    ls="dashed",
-    lw="1",
-    label="moist adiabat",
+mt.get_n2(r_consrv["theta"], r_consrv["q"], r_consrv["altitude"]).plot(
+    c="lightgrey", ls="--", label="moist", **kwargs
 )
-get_n2(pseudo["theta"], pseudo["q"]).plot(
-    ax=ax[2],
-    y="altitude",
-    ylim=ylim,
-    xlim=nlim,
-    color="k",
-    ls="dashed",
-    lw="1",
-    label="pseudo adiabat",
+mt.get_n2(r_wthice["theta"], r_wthice["q"], r_consrv["altitude"]).plot(
+    c="grey", ls=":", label="ice", **kwargs
 )
 
 ax[2].set_xlabel("$N$ / s")
@@ -447,15 +206,27 @@ ax[2].set_ylabel("")
 
 ax[0].set_xlabel("$\\theta$ / K")
 ax[0].set_ylabel("altitude / m")
-ax[0].set_xticks([300, 330, 360])
+ax[0].set_xticks([300, 330, 360, 390])
+ax[0].set_yticks(np.arange(0, 18001, 3000))
 
 ax[1].set_xlabel("RH")
 ax[1].set_ylabel("")
+
+ax[1].set_yticks([z_cpt.quantile(.35),z_cpt.quantile(.35)],minor="True")
+ax[1].tick_params(axis='both', which='minor', colors='red')
 
 ax[0].legend(fontsize=10)
 fig.tight_layout()
 sns.despine(offset=10)
 plt.savefig("plots/sounding.pdf")
+
+# %%
+halo_rh.quantile(.5)
+TRH = rs_bar["ta"].where(rs_bar["ta"]<273.15)
+RHice = svp.ice_wagner_etal(TRH)/svp.liq_wagner_pruss(TRH)
+TRH = gs_bar["ta"].where(gs_bar["ta"]<273.15)
+RHice_g = svp.ice_wagner_etal(TRH)/svp.liq_wagner_pruss(TRH)
+
 # %%
 # -- plot differencex wrt GATE
 #
@@ -473,13 +244,14 @@ y = y - pseudo_gate["T"].values
 y = y.where(y > 0.01)
 
 dtheta_rs = rs.theta - gs.theta
-dtheta_ds = ds.theta - gs.theta
-
+dtheta_bs = bs.theta - gs.theta
+gs.altitude
+# %%
 sns.set_context("paper")
 fig, ax = plt.subplots(1, 1, figsize=(3, 4), sharey=True)
 
 dtheta_rs.plot(ax=ax, y="altitude", ylim=ylim, xlim=dlim, label="rapsodi", color="navy")
-dtheta_ds.plot(ax=ax, y="altitude", ylim=ylim, xlim=dlim, label="beach", color="teal")
+dtheta_bs.plot(ax=ax, y="altitude", ylim=ylim, xlim=dlim, label="beach", color="teal")
 
 x.plot(ax=ax, y="altitude", color="k", ls="dotted", label="theory", lw=1)
 y.plot(ax=ax, y="altitude", color="k", ls="dotted", lw=1)
@@ -527,13 +299,13 @@ plt.savefig("plots/DeltaT.pdf")
 sns.set_context("paper")
 fig, ax = plt.subplots(1, 1, figsize=(3, 4), sharey=True)
 
-delta_ds = (
-    ds2.mean(dim="sonde").coarsen(altitude=5, boundary="trim").mean().theta - ds.theta
+delta_bs = (
+    bs2.mean(dim="sonde").coarsen(altitude=5, boundary="trim").mean().theta - bs.theta
 )
 label = "beach"
-delta_bar_ds = delta_ds.sel(altitude=slice(0, 14000)).mean().values
-delta_ds.plot(ax=ax, y="altitude", ylim=ylim, label=label)
-delta_ds
+delta_bar_bs = delta_bs.sel(altitude=slice(0, 14000)).mean().values
+delta_bs.plot(ax=ax, y="altitude", ylim=ylim, label=label)
+delta_bs
 
 delta_rs = (
     rs2.mean(dim="sonde").coarsen(altitude=5, boundary="trim").mean().theta - rs.theta
@@ -548,7 +320,7 @@ ax.set_xlabel("$\\Delta \\theta$ / K")
 ax.set_ylabel("altitude / m")
 ax.set_ylabel("altitude / km")
 
-ax.set_xticks([delta_bar_ds, delta_bar_rs], minor=True)
+ax.set_xticks([delta_bar_bs, delta_bar_rs], minor=True)
 
 ax.set_yticks(np.arange(0, 12300, 3000))
 ax.set_yticklabels([0, 3, 6, 9, 12])
@@ -556,7 +328,7 @@ ax.set_yticklabels([0, 3, 6, 9, 12])
 plt.legend()
 sns.despine(offset=10)
 plt.savefig("plots/DeltaT2.pdf")
-print(f"differences: beach {delta_bar_ds:.2f}, rapsodi {delta_bar_rs:.2f}")
+print(f"differences: beach {delta_bar_bs:.2f}, rapsodi {delta_bar_rs:.2f}")
 # %%
 # - look at distributions
 #
@@ -697,7 +469,7 @@ nlim = (0, 0.02)
 rlim = (0, 1)
 
 rs.theta.plot(ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="rapsodi", color="navy")
-ds.theta.plot(ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="beach", color="teal")
+bs.theta.plot(ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="beach", color="teal")
 
 ax.plot(gs.theta, gs.altitude, label="gate", color="orangered")
 
@@ -716,7 +488,7 @@ fig, ax = plt.subplots(1, 1, figsize=(3, 3), sharey=True)
 
 rs.u.plot(ax=ax, y="altitude", ylim=ylim, label="rapsodi", color="navy")
 gs.ua.plot(ax=ax, y="altitude", ylim=ylim, label="beach", color="orangered")
-ds.u.plot(ax=ax, y="altitude", ylim=(0, 25000), label="gate", color="teal")
+bs.u.plot(ax=ax, y="altitude", ylim=(0, 25000), label="gate", color="teal")
 ax.set_xlabel("$u$ / ms$^{-1}$")
 ax.set_ylabel("altitude / m")
 ax.set_xlim(-30, 10)
@@ -724,4 +496,6 @@ ax.set_xlim(-30, 10)
 sns.despine(offset=10)
 plt.savefig("plots/zonal-wind.pdf")
 
+# %%
+print (np.sqrt(10*3/1000/300))
 # %%
