@@ -1,10 +1,9 @@
 #  %%
-# % pip install moist_thermodynamics
-# -------------
-# Define some functions for plotting and evaluating atmospheric soundings
-
+# -Define some functions for plotting and evaluating atmospheric soundings
+#
 import utilities.data_utils as dus
 import utilities.preprocessing as dpp
+from utilities.settings_and_colors import colors
 
 import xarray as xr
 import matplotlib.pyplot as plt
@@ -14,7 +13,6 @@ from moist_thermodynamics import functions as mt
 from moist_thermodynamics import saturation_vapor_pressures as svp
 from moist_thermodynamics import constants
 import utilities.mt_beta as mt_beta
-from utilities.settings_and_colors import colors
 
 import seaborn as sns
 
