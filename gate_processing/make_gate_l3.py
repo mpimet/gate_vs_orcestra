@@ -116,7 +116,7 @@ def coverage(xx, sf=100):
 # %%
 # - clean and interpolate for l3 data
 #
-gate = dus.open_gate("QmQzZpSA61Q2BfX8Epbq7KSRZ2Et1xHd5EPiy1zsok2t4Q")
+gate = dus.open_gate("Qmcc6oJjJ9gjw1WB3Kuv3v3GdhwsM7u37fj7o6CLkh4mSH")
 
 g0 = mask_unphysical(gate).reset_coords(["launch_time", "launch_lat", "launch_lon"])
 g1 = fill_gaps(g0, max_igap=1000, max_egap=300)

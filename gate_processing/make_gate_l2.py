@@ -21,13 +21,14 @@ def process_gate(fdir):
     #
     #
     dz = 10
-    alt_bins = np.arange(0, 31000.1, dz) - dz / 2
-    alt_bins[:-1]
+    alt_bin_centers = np.arange(0, 31000.0 + dz / 2, dz)
     x = []
     for f in sorted(glob.glob(f"{fdir}/*.nc")):
         ds = xr.open_dataset(f)
         x.append(
-            ds.groupby_bins(ds.alt, bins=alt_bins, labels=alt_bins[:-1])
+            ds.groupby_bins(
+                ds.alt, bins=(alt_bin_centers - dz / 2), labels=alt_bin_centers[:-1]
+            )
             .mean()
             .assign(
                 sonde_id=(("sonde", [f], {"long_name": "sonde identifier"})),
