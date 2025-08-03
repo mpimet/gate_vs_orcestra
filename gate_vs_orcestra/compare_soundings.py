@@ -7,7 +7,6 @@ import utilities.data_utils as dus
 import utilities.preprocessing as dpp
 
 import xarray as xr
-import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -15,7 +14,9 @@ from moist_thermodynamics import functions as mt
 from moist_thermodynamics import saturation_vapor_pressures as svp
 from moist_thermodynamics import constants
 import utilities.mt_beta as mt_beta
+from utilities.settings_and_colors import colors
 
+import seaborn as sns
 
 es = svp.liq_wagner_pruss
 P0 = constants.P0
@@ -58,27 +59,27 @@ gate = dus.open_gate(cids["gate"])
 # %%
 # - localize data into different domains
 #
-gs2 = dpp.sel_percusion_E(gate)
-rs2 = dpp.sel_percusion_E(rapsodi)
-bs2 = dpp.sel_percusion_E(beach)
+gs_PE = dpp.sel_percusion_E(gate)
+rs_PE = dpp.sel_percusion_E(rapsodi)
+bs_PE = dpp.sel_percusion_E(beach)
 
-gs1 = dpp.sel_gate_A(gs2)
-rs1 = dpp.sel_gate_A(rs2)
-bs1 = dpp.sel_gate_A(bs2)
+gs_GA = dpp.sel_gate_A(gs_PE)
+rs_GA = dpp.sel_gate_A(rs_PE)
+bs_GA = dpp.sel_gate_A(bs_PE)
 
-gs_bar = gs2.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
-rs_bar = rs2.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
-bs_bar = bs2.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
+gs_bar_PE = gs_PE.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
+rs_bar_PE = rs_PE.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
+bs_bar_PE = bs_PE.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
 
-gs1_bar = gs1.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
-rs1_bar = rs1.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
-bs1_bar = bs1.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
+gs_GA_bar = gs_GA.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
+rs_GA_bar = rs_GA.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
+bs_GA_bar = bs_GA.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
 
 # %%
 # - parameters for soundings
 #
 sfc_vals = {}
-sondes = {"gate": gs1, "rapsodi": rs1}
+sondes = {"gate": gs_GA, "rapsodi": rs_GA}
 for sset in ["gate", "rapsodi"]:
     xs = sondes[sset]
     P_sfc = xs.p.sel(altitude=slice(10, 50)).max(dim="altitude") + 100
@@ -119,44 +120,53 @@ q_op02 = sfc_vals["rapsodi_p02"]["q"].values
 # %%
 # - zero-degree isotherms
 #
-z0_bs = (
-    bs1["altitude"]
-    .where((bs1.ta.mean(dim="sonde") < 273.15).compute(), drop=True)[0]
-    .values
-)
-z0_rs = (
-    rs1["altitude"]
-    .where((rs1.ta.mean(dim="sonde") < 273.15).compute(), drop=True)[0]
-    .values
-)
-z0_gate = (
-    gs1["altitude"]
-    .where((gs1.ta.mean(dim="sonde") < 273.15).compute(), drop=True)
-    .values
-)
+print(f"Height of 0º isotherm:")
+for ds in [gs_PE, bs_PE, rs_PE]:
+    Tx = (ds.ta - constants.T0) ** 2
+    z_T0 = Tx.idxmin(dim="altitude")
+    if ds.title[0] == "G":
+        z_T0_gate = z_T0
+    print(
+        f"  {ds.title[: ds.title.find(' ')]:9s}: {z_T0.median().values:.2f}m ({z_T0.quantile(0.1).values:.2f} m,{z_T0.quantile(0.9).values:.2f} m)"
+    )
 
-print(
-    f"Freezing levels:\n ORCESTRA radiosondes {z0_rs:.1f}m,\n ORCESTRA dropsondes {z0_bs:.1f}m,\n GATE {z0_gate[0]:.1f}m"
-)
 # %%
-z_cpt = rs1["ta"].idxmin(dim="altitude")
-z_cpt.plot.hist(bins=100)
+# - cold point
+#
+print(f"Height and temerature of cold point:")
+for ds in [gs_PE, rs_PE]:
+    z_cp = ds.ta.idxmin(dim="altitude")
+    t_cp = ds.ta.min(dim="altitude")
+    print(
+        f"  {ds.title[: ds.title.find(' ')]:9s}: {z_cp.median().values:.2f} m ({z_cp.quantile(0.1).values:.2f} m, {z_cp.quantile(0.9).values:.2f} m)"
+    )
+    print(
+        f"            {t_cp.median().values:.2f} K ({t_cp.quantile(0.1).values:.2f} K, {t_cp.quantile(0.9).values:.2f} K)"
+    )
 
-t_cp = rs1["ta"].min(dim="altitude")
-print(t_cp.quantile(0.35))
+sns.set_context(context="paper")
+fig, ax = plt.subplots(1, 1, figsize=(3, 2), sharey=True)
+z_cp.plot.hist(bins=100, density=True, color="navy", xlim=(15000, 20000))
+ax.set_xlabel("altitude / m")
+sns.despine(offset=10)
+
+Tx = rs_bar_PE.ta
+RHice = svp.ice_wagner_etal(Tx) / svp.liq_wagner_pruss(Tx)
 # %%
+# - create theoretical soundings
+#
 P = np.arange(100900.0, 4000.0, -500)
 
-o_consrv = mt_beta.mk_sounding_ds(P, T_orce, q_orce)
+r_consrv = mt_beta.mk_sounding_ds(P, T_orce, q_orce)
 g_consrv = mt_beta.mk_sounding_ds(P, T_gate, q_gate)
 p_pseudo = mt_beta.mk_sounding_ds(P, T_op02, q_op02, thx=mt.theta_e_bolton)
-o_pseudo = mt_beta.mk_sounding_ds(P, T_orce, q_orce, thx=mt.theta_e_bolton)
+r_pseudo = mt_beta.mk_sounding_ds(P, T_orce, q_orce, thx=mt.theta_e_bolton)
 g_pseudo = mt_beta.mk_sounding_ds(P, T_gate, q_gate, thx=mt.theta_e_bolton)
-o_wthice = mt_beta.mk_sounding_ds(P, T_orce, q_orce, integrate=True)
+r_wthice = mt_beta.mk_sounding_ds(P, T_orce, q_orce, integrate=True)
 g_wthice = mt_beta.mk_sounding_ds(P, T_gate, q_gate, integrate=True)
 
 # %%
-# - profiles
+# - plot profiles
 #
 sns.set_context(context="talk")
 fig, ax = plt.subplots(1, 3, figsize=(10, 5), sharey=True)
@@ -166,18 +176,18 @@ rlim = (0, 1)
 dlim = (295, 355)
 
 kwargs = {"ax": ax[0], "y": "altitude", "ylim": ylim, "xlim": (294, 404)}
-rs_bar.theta.plot(c="navy", ls="-", label="rapsodi", **kwargs)
-bs_bar.theta.plot(c="teal", ls="-", label="beach", **kwargs)
-gs_bar.theta.plot(c="orangered", ls="-", label="gate", **kwargs)
+rs_bar_PE.theta.plot(c=colors["rapsodi"], ls="-", label="rapsodi", **kwargs)
+bs_bar_PE.theta.plot(c=colors["beach"], ls="-", label="beach", **kwargs)
+gs_bar_PE.theta.plot(c=colors["gate"], ls="-", label="gate", **kwargs)
 
 r_pseudo["theta"].plot(c="grey", ls="--", label="pseudo", **kwargs)
 r_consrv["theta"].plot(c="lightgrey", ls="--", label="moist", **kwargs)
 r_wthice["theta"].plot(c="grey", ls=":", label="ice", **kwargs)
 
 kwargs = {"ax": ax[1], "y": "altitude", "ylim": ylim, "xlim": (0, 1)}
-rs_bar.rh.plot(c="navy", ls="-", **kwargs)
-bs_bar.rh.plot(c="teal", ls="-", **kwargs)
-gs_bar.rh.plot(c="orangered", ls="-", **kwargs)
+rs_bar_PE.rh.plot(c=colors["rapsodi"], ls="-", **kwargs)
+bs_bar_PE.rh.plot(c=colors["beach"], ls="-", **kwargs)
+gs_bar_PE.rh.plot(c=colors["gate"], ls="-", **kwargs)
 
 ax[1].plot(
     [halo_rh.quantile(0.34), halo_rh.quantile(0.65)],
@@ -198,18 +208,18 @@ ax[1].plot(
 )
 ax[1].legend(fontsize=9)
 
-RHice.plot(c="navy", ls="dotted", **kwargs, label="ice saturated")
+RHice.plot(c=colors["rapsodi"], ls="dotted", **kwargs, label="ice saturated")
 ax[1].legend(fontsize=9)
 
 kwargs = {"ax": ax[2], "y": "altitude", "ylim": ylim, "xlim": (0, 0.02)}
-mt.get_n2(rs_bar.theta, rs_bar.q, rs_bar.altitude, axis=0).plot(
-    c="navy", ls="-", label="rapsodi", **kwargs
+mt.get_n2(rs_bar_PE.theta, rs_bar_PE.q, rs_bar_PE.altitude, axis=0).plot(
+    c=colors["rapsodi"], ls="-", label="rapsodi", **kwargs
 )
-mt.get_n2(bs_bar.theta, bs_bar.q, bs_bar.altitude).plot(
-    c="teal", ls="-", label="beach", **kwargs
+mt.get_n2(bs_bar_PE.theta, bs_bar_PE.q, bs_bar_PE.altitude).plot(
+    c=colors["beach"], ls="-", label="beach", **kwargs
 )
-mt.get_n2(gs_bar.theta, gs_bar.q, gs_bar.altitude).plot(
-    c="orangered", ls="-", label="gate", **kwargs
+mt.get_n2(gs_bar_PE.theta, gs_bar_PE.q, gs_bar_PE.altitude).plot(
+    c=colors["gate"], ls="-", label="gate", **kwargs
 )
 
 mt.get_n2(r_pseudo["theta"], r_pseudo["q"], r_pseudo["altitude"]).plot(
@@ -234,7 +244,7 @@ ax[0].set_yticks(np.arange(0, 18001, 3000))
 ax[1].set_xlabel("RH")
 ax[1].set_ylabel("")
 
-ax[1].set_yticks([z_cpt.quantile(0.35), z_cpt.quantile(0.35)], minor="True")
+ax[1].set_yticks([z_cp.quantile(0.35), z_cp.quantile(0.35)], minor="True")
 ax[1].tick_params(axis="both", which="minor", colors="red")
 
 ax[0].legend(fontsize=10)
@@ -254,28 +264,36 @@ x = r_pseudo["T"]
 x = x - g_pseudo["T"].values
 x = x.where(x > 0.01)
 
-y = p_pseudo["T"]
+y = r_pseudo["T"]
 y = y - g_pseudo["T"].values
 y = y.where(y > 0.01)
 
-dtheta_rs = rs_bar.theta - gs_bar.theta
-dtheta_bs = bs_bar.theta - gs_bar.theta
+dtheta_rs = rs_bar_PE.theta - gs_bar_PE.theta
+dtheta_bs = bs_bar_PE.theta - gs_bar_PE.theta
 
 sns.set_context("paper")
 fig, ax = plt.subplots(1, 1, figsize=(3, 4), sharey=True)
 
-dtheta_rs.plot(ax=ax, y="altitude", ylim=ylim, xlim=dlim, label="rapsodi", color="navy")
-dtheta_bs.plot(ax=ax, y="altitude", ylim=ylim, xlim=dlim, label="beach", color="teal")
+dtheta_rs.plot(
+    ax=ax, y="altitude", ylim=ylim, xlim=dlim, label="rapsodi", color=colors["rapsodi"]
+)
+dtheta_bs.plot(
+    ax=ax, y="altitude", ylim=ylim, xlim=dlim, label="beach", color=colors["beach"]
+)
 
 x.plot(ax=ax, y="altitude", color="k", ls="dotted", label="theory", lw=1)
 y.plot(ax=ax, y="altitude", color="k", ls="dotted", lw=1)
 
 ax.plot(
-    np.asarray([0, 3.5]), np.asarray([z0_rs, z0_rs]), color="grey", lw="0.5", ls="-"
+    np.asarray([0, 3.5]),
+    np.asarray([z_T0.quantile(0.5), z_T0.quantile(0.5)]),
+    color="grey",
+    lw="0.5",
+    ls="-",
 )
 ax.annotate(
     "$z_0$",
-    xy=(-1, z0_rs),
+    xy=(-1, z_T0.quantile(0.5)),
     fontsize=8,
 )
 
@@ -301,7 +319,7 @@ ax.set_xticks([0], minor=True)
 
 ax.set_yticks(np.arange(0, 24000, 3000))
 ax.set_yticklabels([0, 3, 6, 9, 12, 15, 18, 21])
-ax.set_yticks([z0_gate[0], z0_rs], minor=True)
+ax.set_yticks([z_T0_gate.quantile(0.5), z_T0.quantile(0.5)], minor=True)
 
 plt.legend(loc="best", fontsize=8)
 plt.tight_layout()
@@ -314,13 +332,13 @@ sns.set_context("paper")
 fig, ax = plt.subplots(1, 1, figsize=(3, 4), sharey=True)
 
 label = "beach"
-delta_bs = (bs1_bar.theta - bs_bar.theta)
+delta_bs = bs_GA_bar.theta - bs_bar_PE.theta
 delta_bar_bs = delta_bs.sel(altitude=slice(0, 14000)).mean().values
 delta_bs.plot(ax=ax, y="altitude", ylim=ylim, label=label)
 delta_bs
 
 label = "rapsodi"
-delta_rs = (rs1_bar.theta - rs_bar.theta)
+delta_rs = rs_GA_bar.theta - rs_bar_PE.theta
 delta_bar_rs = delta_rs.sel(altitude=slice(0, 14000)).mean().values
 delta_rs.plot(ax=ax, y="altitude", ylim=ylim, label=label)
 
@@ -346,15 +364,15 @@ sns.set_context("paper")
 fig, ax = plt.subplots(1, 3, figsize=(10, 3))
 
 gate["theta"].sel(altitude=slice(0, 300)).plot.hist(
-    ax=ax[0], bins=300, alpha=0.4, density=True, color="orangered"
+    ax=ax[0], bins=300, alpha=0.4, density=True, color=colors["gate"]
 )
 
 rapsodi["theta"].sel(altitude=slice(0, 300)).plot.hist(
-    ax=ax[0], bins=30, alpha=0.4, density=True, color="navy"
+    ax=ax[0], bins=30, alpha=0.4, density=True, color=colors["rapsodi"]
 )
 
 beach["theta"].sel(altitude=slice(0, 300)).plot.hist(
-    ax=ax[0], bins=30, alpha=0.4, density=True, color="teal"
+    ax=ax[0], bins=30, alpha=0.4, density=True, color=colors["beach"]
 )
 
 ax[0].set_xlim(294, 304)
@@ -378,13 +396,13 @@ x2 = (
 ax[0].set_xticks([np.round(x1, 2), np.round(x2, 2)])
 
 gate["rh"].sel(altitude=slice(10, 100)).plot.hist(
-    ax=ax[1], bins=300, alpha=0.4, density=True, color="orangered"
+    ax=ax[1], bins=300, alpha=0.4, density=True, color=colors["gate"]
 )
 rapsodi["rh"].sel(altitude=slice(10, 100)).plot.hist(
-    ax=ax[1], bins=30, alpha=0.4, density=True, color="navy"
+    ax=ax[1], bins=30, alpha=0.4, density=True, color=colors["rapsodi"]
 )
 beach["rh"].sel(altitude=slice(10, 100)).plot.hist(
-    ax=ax[1], bins=30, alpha=0.4, density=True, color="teal"
+    ax=ax[1], bins=30, alpha=0.4, density=True, color=colors["beach"]
 )
 ax[1].set_xlim(0.5, 1.1)
 ax[1].set_xlabel("RH$_\\mathrm{sfc}$ / $-$")
@@ -407,13 +425,13 @@ x2 = (
 ax[1].set_xticks([0.75, np.round((x1 + x2) / 2, 2), 0.9])
 
 gate["p"].sel(altitude=slice(10, 50)).plot.hist(
-    ax=ax[2], bins=30, alpha=0.4, density=True, color="orangered"
+    ax=ax[2], bins=30, alpha=0.4, density=True, color=colors["gate"]
 )
 rapsodi["p"].sel(altitude=slice(10, 50)).plot.hist(
-    ax=ax[2], bins=30, alpha=0.4, density=True, color="navy"
+    ax=ax[2], bins=30, alpha=0.4, density=True, color=colors["rapsodi"]
 )
 beach["p"].sel(altitude=slice(10, 50)).plot.hist(
-    ax=ax[2], bins=30, alpha=0.4, density=True, color="teal"
+    ax=ax[2], bins=30, alpha=0.4, density=True, color=colors["beach"]
 )
 ax[2].set_xlim(100000, 102000)
 ax[2].set_xlabel("$p_\\mathrm{sfc}$ / $-$")
@@ -447,9 +465,15 @@ tlim = (296, 356)
 nlim = (0, 0.02)
 rlim = (0, 1)
 
-rs_bar.theta.plot(ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="rapsodi", color="navy")
-bs_bar.theta.plot(ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="beach", color="teal")
-gs_bar.theta.plot(ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="beach", color="orangered")
+rs_bar_PE.theta.plot(
+    ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="rapsodi", color=colors["rapsodi"]
+)
+bs_bar_PE.theta.plot(
+    ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="beach", color=colors["beach"]
+)
+gs_bar_PE.theta.plot(
+    ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="beach", color=colors["gate"]
+)
 
 ax.set_xlabel("$\\theta$ / K")
 ax.set_ylabel("altitude / m")
@@ -464,9 +488,13 @@ plt.savefig("plots/theta.pdf")
 sns.set_context(context="paper")
 fig, ax = plt.subplots(1, 1, figsize=(3, 3), sharey=True)
 
-rs_bar.u.plot(ax=ax, y="altitude", ylim=ylim, label="rapsodi", color="navy")
-gs_bar.u.plot(ax=ax, y="altitude", ylim=ylim, label="beach", color="orangered")
-bs_bar.u.plot(ax=ax, y="altitude", ylim=(0, 25000), label="gate", color="teal")
+rs_bar_PE.u.plot(
+    ax=ax, y="altitude", ylim=ylim, label="rapsodi", color=colors["rapsodi"]
+)
+gs_bar_PE.u.plot(ax=ax, y="altitude", ylim=ylim, label="beach", color=colors["gate"])
+bs_bar_PE.u.plot(
+    ax=ax, y="altitude", ylim=(0, 25000), label="gate", color=colors["beach"]
+)
 ax.set_xlabel("$u$ / ms$^{-1}$")
 ax.set_ylabel("altitude / m")
 ax.set_xlim(-23, 7)
