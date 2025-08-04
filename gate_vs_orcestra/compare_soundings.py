@@ -52,7 +52,16 @@ zbar = x.altitude.mean().values
 cids = dus.get_cids()
 beach = dus.open_dropsondes(cids["dropsondes"])
 rapsodi = dus.open_radiosondes(cids["radiosondes"])
-gate = dus.open_gate(cids["gate"])
+# gate = dus.open_gate(cids["gate"])
+
+gate = (
+    xr.open_dataset(f"~/data/gate-xx.zarr", engine="zarr")
+    .set_coords(["launch_lat", "launch_lon", "launch_time"])
+    .swap_dims({"sonde": "launch_time"})
+    .sel(launch_time=slice("1974-08-10", "1974-09-30"))
+    .swap_dims({"launch_time": "sonde"})
+)
+
 
 # %%
 # - localize data into different domains
