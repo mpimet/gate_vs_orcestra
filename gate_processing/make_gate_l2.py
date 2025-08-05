@@ -147,6 +147,7 @@ def process_gate(fdir, alt_bin_centers):
 
     del sondes.attrs["launch_start_position"]
     del sondes.attrs["launch_end_position"]
+    del sondes.attrs["platform"]
 
     return sondes
 

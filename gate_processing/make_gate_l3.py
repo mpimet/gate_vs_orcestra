@@ -4,58 +4,12 @@ import xarray as xr
 import numpy as np
 import utilities.data_utils as dus
 
+from moist_thermodynamics import functions as mt
+from moist_thermodynamics import saturation_vapor_pressures as svp
 
-def fill_gaps(ds, max_igap=1500, max_egap=300):
-    """
-    Interpolate large gaps, and fill remaining smaller gaps at the boundaries by extrapolating
-    using nearest values.
-    """
-    from moist_thermodynamics import functions as mt
-    from moist_thermodynamics import saturation_vapor_pressures as svp
-
-    es = svp.liq_wagner_pruss
-
-    if max_egap > max_igap:
-        raise ValueError("extrapolation gaps must be smaller than interpolation gaps")
-
-    ivars = {"u": "akima", "v": "akima", "rh": "akima", "ta": "linear", "lnp": "linear"}
-    evars = {
-        "u": "nearest",
-        "v": "nearest",
-        "theta": "nearest",
-        "q": "nearest",
-        "lnp": "linear",
-    }
-
-    ds = ds.assign(lnp=np.log(ds.p))
-    ds = ds.assign(
-        **{
-            var: ds[var].interpolate_na(dim="altitude", method=method, max_gap=max_igap)
-            for var, method in ivars.items()
-        }
-    )
-    ds = ds.assign(p=np.exp(ds.lnp))
-    ds = ds.assign(theta=mt.theta(ds.ta, ds.p))
-    ds = ds.assign(
-        q=mt.relative_humidity_to_specific_humidity(ds.rh, ds.p, ds.ta, es=es)
-    )
-    ds = ds.assign(
-        **{
-            var: ds[var].interpolate_na(
-                dim="altitude",
-                method=method,
-                max_gap=max_egap,
-                fill_value="extrapolate",
-            )
-            for var, method in evars.items()
-        }
-    )
-    ds = ds.assign(p=np.exp(ds.lnp))
-    ds = ds.assign(ta=mt.theta2T(ds.theta, ds.p))
-    ds = ds.assign(rh=mt.specific_humidity_to_relative_humidity(ds.q, ds.p, ds.ta))
-    ds = ds.drop_vars("lnp")
-
-    return ds
+rh_to_hus = mt.relative_humidity_to_specific_humidity
+hus_to_rh = mt.specific_humidity_to_relative_humidity
+es = svp.liq_wagner_pruss
 
 
 def in_bnds(da, lo, hi):
@@ -81,15 +35,61 @@ def mask_unphysical(ds):
 
     for z1 in [2050, 4900]:
         z2 = z1 + 300
-        rh_slice = ds["rh"].sel(altitude=slice(z1, z2))
         problem_platform = ds.platform_id == "METEOR"
-        dry_spike_in_region = (rh_slice.min(dim="altitude") < 0.2) & (
+        rh_slice = ds["rh"].sel(altitude=slice(z1, z2))
+        dry_spike = (rh_slice.min(dim="altitude") < 0.2) & (
             rh_slice.max(dim="altitude") > 0.4
         )
-        bad_sondes = ds.isel(sonde=(problem_platform & dry_spike_in_region))
+        bad_sondes = ds.isel(sonde=(problem_platform & dry_spike))
         outside_error_region = (ds.altitude < z1) | (ds.altitude > z2)
-        not_bad_sonde = ~ds.sonde_id.isin(bad_sondes.sonde_id.values)
-        ds = ds.assign({"rh": ds["rh"].where(not_bad_sonde | outside_error_region)})
+        good_sondes = ~ds.sonde_id.isin(bad_sondes.sonde_id.values)
+        ds = ds.assign({"rh": ds["rh"].where(good_sondes | outside_error_region)})
+
+    return ds
+
+
+def fill_gaps(ds, max_igap=1500, max_egap=300):
+    """
+    Interpolate large gaps, and fill remaining smaller gaps at the boundaries by extrapolating
+    using nearest values.
+    """
+    if max_egap > max_igap:
+        raise ValueError("extrapolation gaps must be smaller than interpolation gaps")
+
+    ivars = {"u": "akima", "v": "akima", "rh": "akima", "ta": "linear", "lnp": "linear"}
+    evars = {
+        "u": "nearest",
+        "v": "nearest",
+        "theta": "nearest",
+        "q": "nearest",
+        "lnp": "linear",
+    }
+
+    ds = ds.assign(lnp=np.log(ds.p))
+    ds = ds.assign(
+        **{
+            var: ds[var].interpolate_na(dim="altitude", method=method, max_gap=max_igap)
+            for var, method in ivars.items()
+        }
+    )
+    ds = ds.assign(p=np.exp(ds.lnp))
+    ds = ds.assign(theta=mt.theta(ds.ta, ds.p))
+    ds = ds.assign(rh_to_hus(ds.rh, ds.p, ds.ta, es=es))
+    ds = ds.assign(
+        **{
+            var: ds[var].interpolate_na(
+                dim="altitude",
+                method=method,
+                max_gap=max_egap,
+                fill_value="extrapolate",
+            )
+            for var, method in evars.items()
+        }
+    )
+    ds = ds.assign(p=np.exp(ds.lnp))
+    ds = ds.assign(ta=mt.theta2T(ds.theta, ds.p))
+    ds = ds.assign(rh=mt.hus_to_rh(ds.q, ds.p, ds.ta))
+    ds = ds.drop_vars("lnp")
 
     return ds
 
@@ -106,13 +106,16 @@ def mask_outliers(ds, nstd=3, dim="sonde") -> xr.Dataset:
         hi = da.mean(dim=dim) + da.std(dim=dim, ddof=1) * nstd
         return [lo, hi]
 
-    cntrl = ds.isel(sonde=(ds.platform_id != "METEOR")).copy(deep=True)
-    return ds.assign(
+    cntrl = ds.isel(sonde=(ds.platform_id != "METEOR"))
+    ds = ds.assign(
         {
             fld: in_bnds(ds[fld], *statistical_bnds(cntrl[fld], nstd, dim=dim))
             for fld in flds
         }
     )
+    ds = ds.assign(theta=mt.theta(ds.ta, ds.p))
+    ds = ds.assign(q=rh_to_hus(ds.rh, ds.p, ds.ta, es=es))
+    return ds
 
 
 def coverage(xx, sf=100):
@@ -123,7 +126,7 @@ def coverage(xx, sf=100):
 # %%
 # - clean and fill for l3 data
 #
-gate_l2_cid = "QmatY7VJU1kVbwvthFqBxMvZ9dLphrT6X7GNHedTXXzgzj"
+gate_l2_cid = "QmWqhoPicYETXjhwZvbwQCjVFveCwSR89qGVTHCFSuZwku"
 gate_l2 = dus.open_gate(gate_l2_cid)
 
 gate_l3 = (
@@ -141,7 +144,7 @@ gate_l3 = (
             "processing_level": "3",
             "institution": "Max Planck Institute for Meteorologie",
             "source": "radiosonde",
-            #            "history": f"Processed Gate level 2 radiosonde data with {gate_l2_cid} cid",
+            "history": f"Processed Gate level 2 radiosonde data with {gate_l2_cid} cid",
         }
     )
 )
@@ -152,3 +155,5 @@ print(
 )
 
 gate_l3.to_zarr("~/data/gate-l3.zarr")
+
+# %%
