@@ -29,7 +29,7 @@ sns.set_context(context="paper")
 for RV in platforms:
     fig, ax = plt.subplots(1, 5, figsize=(5, 3), sharey=True)
     i = 0
-    if (RV=="ALL"):
+    if RV == "ALL":
         ds = gate.pipe(pre.sel_gate_A)
     else:
         ds = gate.isel(sonde=(gate.platform_id == RV).compute()).pipe(pre.sel_gate_A)
