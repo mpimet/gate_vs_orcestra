@@ -3,6 +3,39 @@ import hashlib
 import numpy as np
 import xarray as xr
 
+variable_attribute_dict = {
+    "ta": {
+        "standard_name": "air_temperature",
+        "units": "K",
+    },
+    "p": {
+        "standard_name": "air_pressure",
+        "units": "Pa",
+    },
+    "q": {
+        "standard_name": "specific_humidity",
+        "units": "kg/kg",
+    },
+    "u": {
+        "standard_name": "eastward_wind",
+        "units": "m/s",
+    },
+    "v": {
+        "standard_name": "northward_wind",
+        "units": "m/s",
+    },
+    "rh": {
+        "standard_name": "relative_humidity",
+        "units": "1",
+        "description": "Relative to Wagner-Pruss saturation vapor pressure over liquid",
+    },
+    "theta": {
+        "standard_name": "air_potential_temperature",
+        "units": "K",
+        "description": "Use dry air gas constants and 1000 hPa as reference pressure",
+    },
+}
+
 
 def hash_xr_var(da):
     return np.array(
@@ -70,7 +103,7 @@ def get_cids():
     orcestra_main = "QmPNVTb5fcN59XUi2dtUZknPx5HNnknBC2x4n7dtxuLdwi"
     return {
         "orcestra": orcestra_main,
-        "gate": "QmSb9ooLjouwyGcmcy1jFcXu5d6wVq7XqZ4JTkrAMJpvnq",
+        "gate": "QmWFfuLW7VSqEFrAwaJr1zY9CzWqF4hC22yqgXELmY133K",
         "radiosondes": f"{orcestra_main}/Radiosondes/RAPSODI_RS_ORCESTRA_level2.zarr",
         "dropsondes": f"{orcestra_main}/HALO/dropsondes/Level_3/PERCUSION_Level_3.zarr",
     }

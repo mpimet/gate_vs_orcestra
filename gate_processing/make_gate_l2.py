@@ -3,13 +3,17 @@ import glob
 import xarray as xr
 import numpy as np
 
-# IMPORTANT FOR DETERMINISTIC CIDs
-import numcodecs
-
+import utilities.data_utils as dus
 import moist_thermodynamics.saturation_vapor_pressures as svp
 import moist_thermodynamics.functions as mt
 
+# IMPORTANT FOR DETERMINISTIC CIDs
+import numcodecs
+
 numcodecs.blosc.set_nthreads(1)
+
+hus_to_rh = mt.specific_humidity_to_relative_humidity
+attr_dict = dus.variable_attribute_dict
 
 
 def process_gate(fdir, alt_bin_centers):
@@ -40,6 +44,7 @@ def process_gate(fdir, alt_bin_centers):
                         [np.float32(ds.launch_end_position.split()[0])],
                         {
                             "long_name": "longitude of drop end position",
+                            "standard_name": "longitude",
                             "units": "degrees_east",
                         },
                     )
@@ -50,6 +55,7 @@ def process_gate(fdir, alt_bin_centers):
                         [np.float32(ds.launch_end_position.split()[1])],
                         {
                             "long_name": "latitude of drop end position",
+                            "standard_name": "latitude",
                             "units": "degrees_north",
                         },
                     )
@@ -82,53 +88,29 @@ def process_gate(fdir, alt_bin_centers):
     ).sortby("launch_time")
 
     sondes = sondes.assign(
-        p=(
-            sondes.p.dims,
-            (sondes.p * 100).values,
-            {
-                "standard_name": "air_pressure",
-                "units": "Pa",
-            },
-        ),
-        q=(
-            sondes.q.dims,
-            (sondes.q / 1000).values,
-            {
-                "standard_name": "specific_humidity",
-                "units": "kg/kg",
-            },
-        ),
-        ta=(
-            sondes.ta.dims,
-            (sondes.ta + 273.15).values,
-            {
-                "standard_name": "air_temperature",
-                "units": "K",
-            },
-        ),
+        p=(sondes.p.dims, (sondes.p * 100).values),
+        q=(sondes.q.dims, (sondes.q / 1000).values),
+        ta=(sondes.ta.dims, (sondes.ta + 273.15).values),
     )
     sondes = sondes.assign(
         rh=(
             sondes.q.dims,
-            mt.specific_humidity_to_relative_humidity(
-                sondes.q, sondes.p, sondes.ta, es=es
-            ).values,
-            {
-                "standard_name": "relative_humidity",
-                "units": "'",
-                "description": "Wagner-Pruss saturation vapor pressure over liquid",
+            hus_to_rh(sondes.q, sondes.p, sondes.ta, es=es).values,
+        ),
+        theta=(sondes.ta.dims, mt.theta(sondes.ta, sondes.p).values),
+        reference_pressure=xr.DataArray(
+            100000.0,
+            attrs={
+                "units": "Pa",
+                "standard_name": "reference_pressure",
+                "description": "Used for calculation of potential temperature",
             },
         ),
-        theta=(
-            sondes.ta.dims,
-            mt.theta(sondes.ta, sondes.p).values,
-            {
-                "standard_name": "air_potential_temperature",
-                "units": "K",
-                "description": "Use dry air gas constants and 1000 hPa as reference pressure",
-            },
-        ),
-    )
+    ).set_coords(["launch_lat", "launch_lon"])
+
+    for var, attrs in attr_dict.items():
+        sondes[var].attrs = attrs
+
     sondes = sondes.assign_attrs(
         {
             "title": "GATE radiosonde dataset (Level 2)",

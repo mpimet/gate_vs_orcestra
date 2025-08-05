@@ -126,7 +126,9 @@ def coverage(xx, sf=100):
 # %%
 # - clean and fill for l3 data
 #
-gate_l2_cid = "QmWqhoPicYETXjhwZvbwQCjVFveCwSR89qGVTHCFSuZwku"
+attr_dict = dus.variable_attribute_dict
+
+gate_l2_cid = "QmT6psBncPq1ya6hXzmqbA4zA35BBUCwGfnN7ZBFt3jcQC"
 gate_l2 = dus.open_gate(gate_l2_cid)
 
 gate_l3 = (
@@ -148,6 +150,10 @@ gate_l3 = (
         }
     )
 )
+
+for var, attrs in attr_dict.items():
+    gate_l3[var].attrs = attrs
+
 print(
     f"GATE level 3 ta data coverage:\n "
     f"initially = {coverage(gate_l2.ta): .8f}%\n "
