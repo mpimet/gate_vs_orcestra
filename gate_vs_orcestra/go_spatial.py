@@ -252,6 +252,6 @@ ax.annotate(
     fontsize=8,
 )
 
-plt.savefig(f"plots/gate-orcestra-sondes.pdf")
+plt.savefig("plots/gate-orcestra-sondes.pdf")
 
 # %%
