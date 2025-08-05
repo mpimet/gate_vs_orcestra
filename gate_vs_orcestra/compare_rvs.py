@@ -1,6 +1,5 @@
 # %%
 # - Define some functions for plotting and evaluating atmospheric soundings
-import xarray as xr
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
