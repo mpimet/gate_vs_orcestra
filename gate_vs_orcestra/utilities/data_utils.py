@@ -70,7 +70,7 @@ def get_cids():
     orcestra_main = "QmPNVTb5fcN59XUi2dtUZknPx5HNnknBC2x4n7dtxuLdwi"
     return {
         "orcestra": orcestra_main,
-        "gate": "QmYbdU9Pn9rMAfcfZBPXradLwYFFKQWJXrsqptRQAWpx4u",
+        "gate": "QmSb9ooLjouwyGcmcy1jFcXu5d6wVq7XqZ4JTkrAMJpvnq",
         "radiosondes": f"{orcestra_main}/Radiosondes/RAPSODI_RS_ORCESTRA_level2.zarr",
         "dropsondes": f"{orcestra_main}/HALO/dropsondes/Level_3/PERCUSION_Level_3.zarr",
     }
