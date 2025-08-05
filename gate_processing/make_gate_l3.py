@@ -74,7 +74,7 @@ def fill_gaps(ds, max_igap=1500, max_egap=300):
     )
     ds = ds.assign(p=np.exp(ds.lnp))
     ds = ds.assign(theta=mt.theta(ds.ta, ds.p))
-    ds = ds.assign(rh_to_hus(ds.rh, ds.p, ds.ta, es=es))
+    ds = ds.assign(q=rh_to_hus(ds.rh, ds.p, ds.ta, es=es))
     ds = ds.assign(
         **{
             var: ds[var].interpolate_na(
@@ -88,7 +88,7 @@ def fill_gaps(ds, max_igap=1500, max_egap=300):
     )
     ds = ds.assign(p=np.exp(ds.lnp))
     ds = ds.assign(ta=mt.theta2T(ds.theta, ds.p))
-    ds = ds.assign(rh=mt.hus_to_rh(ds.q, ds.p, ds.ta))
+    ds = ds.assign(rh=hus_to_rh(ds.q, ds.p, ds.ta))
     ds = ds.drop_vars("lnp")
 
     return ds
@@ -150,10 +150,8 @@ gate_l3 = (
 )
 print(
     f"GATE level 3 ta data coverage:\n "
-    f"initially = {coverage(gate_l3.ta): .8f}%\n "
+    f"initially = {coverage(gate_l2.ta): .8f}%\n "
     f"finally = {coverage(gate_l3.ta):.8f}%\n "
 )
 
 gate_l3.to_zarr("~/data/gate-l3.zarr")
-
-# %%
