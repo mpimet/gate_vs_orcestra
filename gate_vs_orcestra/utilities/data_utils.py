@@ -3,6 +3,39 @@ import hashlib
 import numpy as np
 import xarray as xr
 
+variable_attribute_dict = {
+    "ta": {
+        "standard_name": "air_temperature",
+        "units": "K",
+    },
+    "p": {
+        "standard_name": "air_pressure",
+        "units": "Pa",
+    },
+    "q": {
+        "standard_name": "specific_humidity",
+        "units": "kg/kg",
+    },
+    "u": {
+        "standard_name": "eastward_wind",
+        "units": "m/s",
+    },
+    "v": {
+        "standard_name": "northward_wind",
+        "units": "m/s",
+    },
+    "rh": {
+        "standard_name": "relative_humidity",
+        "units": "1",
+        "description": "Relative to Wagner-Pruss saturation vapor pressure over liquid",
+    },
+    "theta": {
+        "standard_name": "air_potential_temperature",
+        "units": "K",
+        "description": "Use dry air gas constants and 1000 hPa as reference pressure",
+    },
+}
+
 
 def hash_xr_var(da):
     return np.array(
@@ -48,19 +81,9 @@ def open_radiosondes(cid):
 def open_gate(cid):
     ds = xr.open_dataset(f"ipfs://{cid}", engine="zarr")
     return (
-        ds.rename(
-            {
-                "alt": "altitude",
-                "lat_end": "launch_lat",
-                "lon_end": "launch_lon",
-                "ua": "u",
-                "va": "v",
-                "platforms": "platform_id",
-                "time": "launch_time",
-            }
-        )
+        ds.set_coords(["launch_lat", "launch_lon", "launch_time"])
+        .swap_dims({"sonde": "launch_time"})
         .sel(launch_time=slice("1974-08-10", "1974-09-30"))
-        .set_coords(["launch_lat", "launch_lon"])
         .swap_dims({"launch_time": "sonde"})
     )
 
@@ -80,7 +103,7 @@ def get_cids():
     orcestra_main = "QmPNVTb5fcN59XUi2dtUZknPx5HNnknBC2x4n7dtxuLdwi"
     return {
         "orcestra": orcestra_main,
-        "gate": "QmeAFUdB3PZHRtCd441HjRGZPmEadtskXsnL34C9xigH3A",  # "QmU4TMq2mwuc5h1QgFrAo67EFw8YJoXSEEGXWEwU9vZXCF",
+        "gate": "QmWFfuLW7VSqEFrAwaJr1zY9CzWqF4hC22yqgXELmY133K",
         "radiosondes": f"{orcestra_main}/Radiosondes/RAPSODI_RS_ORCESTRA_level2.zarr",
         "dropsondes": f"{orcestra_main}/HALO/dropsondes/Level_3/PERCUSION_Level_3.zarr",
     }
