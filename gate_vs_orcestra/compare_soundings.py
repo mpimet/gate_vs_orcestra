@@ -119,7 +119,7 @@ q_op02 = sfc_vals["rapsodi_p02"]["q"].values
 # %%
 # - zero-degree isotherms
 #
-print(f"Height of 0º isotherm:")
+print("Height of 0º isotherm:")
 for ds in [gs_PE, bs_PE, rs_PE]:
     Tx = (ds.ta - constants.T0) ** 2
     z_T0 = Tx.idxmin(dim="altitude")
@@ -132,7 +132,7 @@ for ds in [gs_PE, bs_PE, rs_PE]:
 # %%
 # - cold point
 #
-print(f"Height and temerature of cold point:")
+print("Height and temerature of cold point:")
 for ds in [gs_PE, rs_PE]:
     z_cp = ds.ta.idxmin(dim="altitude")
     t_cp = ds.ta.min(dim="altitude")
