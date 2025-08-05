@@ -102,8 +102,8 @@ def open_reanalysis(chunks=None, **kwargs):
 def get_cids():
     orcestra_main = "QmPNVTb5fcN59XUi2dtUZknPx5HNnknBC2x4n7dtxuLdwi"
     return {
-        "orcestra": orcestra_main,
         "gate": "QmWFfuLW7VSqEFrAwaJr1zY9CzWqF4hC22yqgXELmY133K",
+        "orcestra": orcestra_main,
         "radiosondes": f"{orcestra_main}/Radiosondes/RAPSODI_RS_ORCESTRA_level2.zarr",
         "dropsondes": f"{orcestra_main}/HALO/dropsondes/Level_3/PERCUSION_Level_3.zarr",
     }
