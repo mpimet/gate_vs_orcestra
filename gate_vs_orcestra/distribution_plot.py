@@ -7,11 +7,25 @@ import moist_thermodynamics.functions as mt
 from moist_thermodynamics import saturation_vapor_pressures as svp
 
 from moist_thermodynamics import constants
-import data_utils as data
-from settings_and_colors import colors
+from utilities import data_utils as data
+from utilities import preprocessing as proc
+from utilities.settings_and_colors import colors
+
+from xhistogram.xarray import histogram
+
+
+def get_hist_of_ta(da_t, da_var, bins_var, bins_ta=np.linspace(240, 305, 200)):
+    bin_name = da_var.name + "_bin"
+    ta_name = da_t.name
+    hist = histogram(da_t, da_var, bins=[bins_ta, bins_var], dim=["altitude"]).compute()
+    return (
+        ((hist * hist[bin_name]).sum(dim=bin_name) / hist.sum(bin_name))
+        .interpolate_na(dim=f"{ta_name}_bin")
+        .rename({f"{ta_name}_bin": ta_name})
+    )
+
+
 # %%
-
-
 cids = data.get_cids()
 rs = data.open_radiosondes(cids["radiosondes"])
 ds = data.open_dropsondes(cids["dropsondes"])
@@ -22,23 +36,19 @@ gate = data.open_gate(cids["gate"])
 # gate = gate.isel(sonde_id=keep)
 # %%
 
+dy = proc.sel_gate_A(ds)
+dx = proc.sel_gate_A(rs.where(rs.ascent_flag == 0, drop=True))
+
 # %%
-gate_region = (
-    data.get_gate_region(gate)
-    .drop_vars("launch_time")
-    .interpolate_na(dim="altitude", method="linear", max_gap=1000)
-    .interpolate_na(
-        dim="altitude", method="linear", fill_value="extrapolate", max_gap=300
-    )
-)
-# %%
+gate_region = proc.sel_gate_A(gate)
+
 orcestra_gate = (
     xr.concat(
         [
-            data.get_gate_region(rs).where(rs.ascent_flag == 0, drop=True),
-            data.get_gate_region(ds),
+            dx,
+            dy,
         ],
-        dim="sonde_id",
+        dim="sonde",
     )
     .drop_vars(["launch_time", "bin_average_time"])
     .interpolate_na(dim="altitude", method="linear", max_gap=1000)
@@ -86,24 +96,31 @@ orcestra_gate = orcestra_gate.assign(
 )
 
 # %%
-orcestra_cp = orcestra_gate.ta.where(orcestra_gate.altitude > 15000).min(dim="altitude")
-gate_cp = gate_region.ta.where(
-    (gate_region.ta.count(dim="altitude") > 1900) & (gate_region.altitude > 15000)
-).min(dim="altitude")
+mask = ~orcestra_gate.ta.isnull().all(dim="altitude")
 
+# Apply the mask along the sonde_id dimension to the full Dataset
+filtered_ds = orcestra_gate.sel(sonde=mask)
+
+# Get index location of min temperature per sonde
+min_idx = filtered_ds.ta.argmin(dim="altitude")
+
+# Select altitude values at those index positions
+min_alt = filtered_ds["altitude"].isel(altitude=min_idx)
+filtered_ds
+# %%
+orcestra_gate = orcestra_gate.dropna(dim="sonde", how="all")
 # %%
 gate_strato = gate_region.where(
     (gate_region.altitude > gate_region.ta.argmin(dim="altitude") * 10)
     & (gate_region.ta.count(dim="altitude") > 1900)
     & (gate_region.altitude > 14000)
 )
-orcestra_strato = orcestra_gate.where(
-    (
-        orcestra_gate.altitude
-        > orcestra_gate.ta.dropna(dim="sonde_id", how="all").argmin(dim="altitude") * 10
-    )
-    & (orcestra_gate.altitude > 14000)
+orcestra_strato = filtered_ds.where(
+    (filtered_ds.altitude > min_alt)
+    & (filtered_ds.ta.count(dim="altitude") > 1900)
+    & (filtered_ds.altitude > 14000)
 )
+
 # %%rs_strato = rs_strato.assign(diff_to_cp=rs_strato.ta - rs_strato.ta.min(dim="altitude"))
 gate_strato = gate_strato.assign(
     diff_to_cp=gate_strato.ta - gate_strato.ta.min(dim="altitude")
@@ -113,27 +130,27 @@ orcestra_strato = orcestra_strato.assign(
 )
 
 # %%
-orcestra_ta = data.get_hist_of_ta(
+orcestra_ta = get_hist_of_ta(
     orcestra_gate.ta.sel(altitude=slice(0, 14000)),
     orcestra_gate.rh.sel(altitude=slice(0, 14000)),
     bins_var=np.linspace(0, 1.1, 100),
     bins_ta=np.linspace(220, 305, 200),
 )
 
-gate_ta = data.get_hist_of_ta(
+gate_ta = get_hist_of_ta(
     gate_region.ta.sel(altitude=slice(0, 14000)),
     gate_region.rh.sel(altitude=slice(0, 14000)),
     bins_var=np.linspace(0, 1.1, 100),
     bins_ta=np.linspace(220, 305, 200),
 )
-orcestra_ta_ice = data.get_hist_of_ta(
+orcestra_ta_ice = get_hist_of_ta(
     orcestra_gate.ta.sel(altitude=slice(0, 14000)),
     orcestra_gate.rh_ice.sel(altitude=slice(0, 14000)),
     bins_var=np.linspace(0, 1.1, 100),
     bins_ta=np.linspace(220, 305, 200),
 )
 
-gate_ta_ice = data.get_hist_of_ta(
+gate_ta_ice = get_hist_of_ta(
     gate_region.ta.sel(altitude=slice(0, 14000)),
     gate_region.rh_ice.sel(altitude=slice(0, 14000)),
     bins_var=np.linspace(0, 1.1, 100),
@@ -144,9 +161,12 @@ gate_ta_ice = data.get_hist_of_ta(
 # %%
 distribution_t = [280, 255]
 thres = 5
-plt.style.use("./gate.mplstyle")
+sns.set_context("paper")
+plt.style.use("utilities/gate.mplstyle")
 fig, axes = plt.subplots(
-    ncols=len(distribution_t) + 1, figsize=((len(distribution_t) + 1) * 5, 5)
+    ncols=len(distribution_t) + 1,
+    figsize=((len(distribution_t) + 1) * 5, 5),
+    sharey=True,
 )
 ax = axes[-1]
 for ax, t in zip(axes[:-1], distribution_t):
@@ -158,6 +178,7 @@ for ax, t in zip(axes[:-1], distribution_t):
         rs_ds = orcestra_ta_ice
         gate_ds = gate_ta_ice
         subscript = "ice"
+
     sns.histplot(
         rs_ds.sel(ta=t, method="nearest"),
         bins=30,
@@ -169,6 +190,7 @@ for ax, t in zip(axes[:-1], distribution_t):
         color=colors["orcestra"],
         ax=ax,
     )
+
     sns.histplot(
         gate_ds.sel(ta=t, method="nearest"),
         bins=30,
@@ -218,4 +240,7 @@ for ax in axes:
     ax.legend(loc="upper right")
     ax.set_xlabel("Relative Humidity")
     ax.set_xlim(0, 1.1)
-sns.despine()
+
+sns.despine(offset=10)
+
+# %%
