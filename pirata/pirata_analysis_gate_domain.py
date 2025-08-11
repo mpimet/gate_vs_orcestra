@@ -22,22 +22,20 @@ var_help = {
 vars = list(var_help.keys())
 
 for varname in vars:
-
     q_varname = f"Q{varname}"
     var_help[q_varname] = {
-        "key": f"q_{var_help[varname]["key"]}",
+        "key": f"q_{var_help[varname]['key']}",
         "depth": var_help[varname]["depth"],
     }
     s_varname = f"S{varname}"
     var_help[s_varname] = {
-        "key": f"s_{var_help[varname]["key"]}",
+        "key": f"s_{var_help[varname]['key']}",
         "depth": var_help[varname]["depth"],
     }
 
 ds_all = {}
 
 for lat_north in lats_north:
-
     filename = f"{path}*{lat_north}n{lon_west}w_{temp_res}.cdf"
     ds = xr.open_mfdataset(filename)
     ds_all[lat_north] = ds
@@ -53,7 +51,6 @@ for var in ds_formatted.data_vars:
     ds_formatted = ds_formatted.rename({var: var_new})
 
     if var_new in var_help:
-
         selected_depth = var_help[var_new]["depth"]
         ds_formatted[var_new] = ds_formatted[var_new].sel(depth=selected_depth)
         ds_formatted[var_new].attrs["sel_depth_m"] = float(selected_depth)
@@ -72,7 +69,6 @@ residuals_dict = {}
 fig, ax = plt.subplots(1, 2, figsize=(10, 5))
 
 for sel_lat in [4, 12]:
-
     sel_t_air = ds_formatted["t_air"].sel(lon=337, lat=sel_lat)
     sel_t_air = sel_t_air.where(sel_t_air["time.month"].isin([8, 9]), drop=True)
     grouped = sel_t_air.groupby("time.year")
