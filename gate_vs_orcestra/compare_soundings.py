@@ -119,7 +119,7 @@ q_op02 = sfc_vals["rapsodi_p02"]["q"].values
 # %%
 # - zero-degree isotherms
 #
-print("Height of 0º isotherm:")
+print("Height of 0˚ isotherm:")
 for ds in [gs_PE, bs_PE, rs_PE]:
     Tx = (ds.ta - mtc.T0) ** 2
     z_T0 = Tx.idxmin(dim="altitude")
@@ -537,7 +537,7 @@ bs_bar.theta.plot(
     ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="beach", color=colors["beach"]
 )
 gs_bar.theta.plot(
-    ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="beach", color=colors["gate"]
+    ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="gate", color=colors["gate"]
 )
 
 ax.set_xlabel("$\\theta$ / K")
@@ -554,8 +554,8 @@ sns.set_context(context="paper")
 fig, ax = plt.subplots(1, 2, figsize=(5, 3), sharey=True)
 
 rs_bar.u.plot(ax=ax[0], y="altitude", label="rapsodi", color=colors["rapsodi"])
-gs_bar.u.plot(ax=ax[0], y="altitude", label="beach", color=colors["gate"])
-bs_bar.u.plot(ax=ax[0], y="altitude", label="gate", color=colors["beach"])
+gs_bar.u.plot(ax=ax[0], y="altitude", label="gate", color=colors["gate"])
+bs_bar.u.plot(ax=ax[0], y="altitude", label="beach", color=colors["beach"])
 
 rs_bar.v.plot(ax=ax[1], y="altitude", ylim=ylim, color=colors["rapsodi"])
 gs_bar.v.plot(ax=ax[1], y="altitude", color=colors["gate"])
