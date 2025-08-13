@@ -43,21 +43,6 @@ es_ice = svp.ice_wagner_etal
 es_mixed = mt.make_es_mxd(es_liq=es_liq, es_ice=es_ice)
 
 
-ice_q = mt.relative_humidity_to_specific_humidity(
-    1.0,
-    p=15000,
-    T=195,
-    es=es_ice,
-)
-rh_plus5_ice = mt.specific_humidity_to_relative_humidity(
-    ice_q,
-    p=150000,
-    T=200,
-    es=es_ice,
-)
-
-
-# %%
 for name, ds in datasets.items():
     datasets[name] = ds.assign(
         cp_t=(
