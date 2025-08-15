@@ -65,48 +65,38 @@ for name, ds in datasets.items():
 
 
 P = np.arange(100900.0, 4000.0, -500)
-orc_q = (
-    datasets["orcestra"]
-    .mean("sonde")
-    .swap_dims({"altitude": "p"})
-    .dropna(dim="p", how="any", subset=["p"])
-    .interp(p=P)
-    .q
-)
-gate_q = (
-    datasets["gate"]
-    .mean("sonde")
-    .swap_dims({"altitude": "p"})
-    .dropna(dim="p", how="any", subset=["p"])
-    .interp(p=P)
-    .q
-)
+
 orc_sfc = datasets["orcestra"].sel(altitude=0).mean("sonde")
 gate_sfc = datasets["gate"].sel(altitude=0).mean("sonde")
-orc_pseudo = calc_iwv(
-    mt_beta.mk_sounding_ds(
-        P, orc_sfc.ta.values, orc_q.values, thx=mtf.theta_e_bolton
-    ).rename({"T": "ta", "P": "p"})
-)
-gate_pseudo = calc_iwv(
-    mt_beta.mk_sounding_ds(
-        P, gate_sfc.ta.values, gate_q.values, thx=mtf.theta_e_bolton
-    ).rename({"T": "ta", "P": "p"})
-)
+orc_pseudo = mt_beta.mk_sounding_ds(
+    P, orc_sfc.ta.values, orc_sfc.q.values, thx=mtf.theta_e_bolton
+).rename({"T": "ta", "P": "p"})
+
+gate_pseudo = mt_beta.mk_sounding_ds(
+    P, gate_sfc.ta.values, gate_sfc.q.values, thx=mtf.theta_e_bolton
+).rename({"T": "ta", "P": "p"})
+
 # %%
-gate_orcrh_q = mtf.relative_humidity_to_specific_humidity(
-    RH=mtf.specific_humidity_to_relative_humidity(
-        orc_q.values, P, orc_pseudo.ta.values, es=svp.liq_wagner_pruss
-    ),
-    p=P,
-    T=gate_pseudo.ta.values,
-)
-gate_orcq_pseudo = calc_iwv(
-    mt_beta.mk_sounding_ds(
-        P, gate_sfc.ta.values, gate_orcrh_q, thx=mtf.theta_e_bolton
-    ).rename({"T": "ta", "P": "p"})
+rh_orc = (
+    datasets["orcestra"]
+    .mean(dim="sonde")
+    .swap_dims({"altitude": "p"})
+    .dropna(dim="p", how="any", subset=["p"])
+    .rh.interp(p=P)
 )
 
+q_gate = mtf.relative_humidity_to_specific_humidity(
+    RH=rh_orc,
+    p=P,
+    T=gate_pseudo.ta.swap_dims({"altitude": "p"}),
+)
+gate_pseudo = calc_iwv(gate_pseudo.assign(q=("altitude", q_gate.values)))
+q_orc = mtf.relative_humidity_to_specific_humidity(
+    RH=rh_orc,
+    p=P,
+    T=orc_pseudo.ta.swap_dims({"altitude": "p"}),
+)
+orc_pseudo = calc_iwv(orc_pseudo.assign(q=("altitude", q_orc.values)))
 # %%
 plt.style.use("utilities/gate.mplstyle")
 fig, ax = plt.subplots(figsize=(6, 5.5))
@@ -144,17 +134,26 @@ ax.text(
     rotation=90,
 )
 
-ax.axvline(gate_orcq_pseudo.iwv, color="k", linestyle="--")
+ax.axvline(orc_pseudo.iwv, color="k", linestyle="--")
 ax.text(
-    x=gate_orcq_pseudo.iwv + 0.3,
+    x=orc_pseudo.iwv + 0.3,
     y=0.2,
-    s="Gate Orcestra RH",
+    s="pseudo ORC",
     color="k",
     ha="left",
     va="top",
     rotation=90,
 )
-
+ax.axvline(gate_pseudo.iwv, color="k", linestyle="--")
+ax.text(
+    x=gate_pseudo.iwv + 0.3,
+    y=0.2,
+    s="pseudo GATE",
+    color="k",
+    ha="left",
+    va="top",
+    rotation=90,
+)
 
 ax.legend()
 sns.despine(offset={"left": 5})
