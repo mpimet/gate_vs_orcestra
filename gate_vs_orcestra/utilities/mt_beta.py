@@ -182,7 +182,7 @@ def mk_sounding_ds(P, T, q, thx=mt.theta_l, integrate=False):
     )
     TPq["q"] = TPq["P"].copy(data=q * np.ones(len(P)))
     TPq["altitude"] = TPq["theta"].copy(
-        data=mt.hydrostatic_altitude_np(P, np.asarray(TPq["T"]), np.asarray(TPq["q"]))
+        data=mt.pressure_altitude(P, np.asarray(TPq["T"]), np.asarray(TPq["q"]))
     )
     TPq["theta"] = TPq["theta"].copy(data=mt.theta(TPq["T"], P))
 
