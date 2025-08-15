@@ -19,8 +19,8 @@ import utilities.modify_ds as md
 # %%
 cids = data.get_cids()
 datasets = {
-    "rs": data.open_radiosondes(cids["radiosondes"]),
-    "ds": data.open_dropsondes(cids["dropsondes"]),
+    "rapsodi": data.open_radiosondes(cids["radiosondes"]),
+    "beach": data.open_dropsondes(cids["dropsondes"]),
     "gate": data.open_gate(cids["gate"]),
 }
 
@@ -30,9 +30,11 @@ for name, ds in datasets.items():
     )
 
 # %%
-datasets["rs"] = datasets["rs"].where(datasets["rs"].ascent_flag == 0, drop=True)
+datasets["rapsodi"] = datasets["rapsodi"].where(
+    datasets["rapsodi"].ascent_flag == 0, drop=True
+)
 datasets["orcestra"] = xr.concat(
-    [datasets["rs"], datasets["ds"]],
+    [datasets["rapsodi"], datasets["beach"]],
     dim="sonde",
 )
 
@@ -120,8 +122,7 @@ plt.style.use("utilities/gate.mplstyle")
 fig, axes = plt.subplots(
     ncols=len(distribution_t), figsize=((len(distribution_t)) * 5, 5)
 )
-for name, cname in [("gate", "gate"), ("ds", "beach"), ("rs", "rapsodi")]:
-    print(cname, colors[cname])
+for name in ["gate", "beach", "rapsodi"]:
     for i, (ta_var, rh_var, height) in enumerate(distribution_t):
         if np.any(
             ~np.isnan(
@@ -142,8 +143,8 @@ for name, cname in [("gate", "gate"), ("ds", "beach"), ("rs", "rapsodi")]:
                 binrange=(0, 1.1),
                 ax=axes[i],
                 binwidth=0.04,
-                label=f"{cname.upper()}, {labels[rh_var]}",
-                color=colors[cname],
+                label=f"{name.upper()}, {labels[rh_var]}",
+                color=colors[name],
             )
         else:
             continue
