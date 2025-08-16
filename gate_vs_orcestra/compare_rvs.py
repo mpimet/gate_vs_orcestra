@@ -10,13 +10,13 @@ import utilities.preprocessing as pre
 # %%
 # - load data
 #
-beach = dus.open_dropsondes(
-    "ipfs://bafybeicb33v6ohezyhgq5rumq4g7ejnfqxzcpuzd4i2fxnlos5d7ebmi3m"
-)
-rapsodi = dus.open_radiosondes(
-    "ipfs://bafybeigensqyqxfyaxgyjhwn6ytdpi3i4sxbtffd4oc27zbimyro4hygjq"
-)
-gate = dus.open_gate("QmSckNEWYkNb1JGVgDUNoQptuE12Czn37WpKpV8pZ3QJiU")
+# %%
+# - load data
+#
+cids = dus.get_cids()
+beach = dus.open_dropsondes(cids["dropsondes"])
+rapsodi = dus.open_radiosondes(cids["radiosondes"])
+gate = dus.open_gate(cids["gate"])
 
 platforms = np.unique(gate.platform_id.values).tolist()
 platforms.append("ALL")
@@ -54,4 +54,5 @@ for RV in platforms:
     sns.despine(offset=5)
     plt.suptitle(RV)
     plt.savefig(f"plots/{RV}_outliers.png", dpi=600)
+
 # %%
