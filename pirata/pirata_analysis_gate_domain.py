@@ -8,7 +8,7 @@ from scipy.stats import linregress
 import matplotlib.ticker as mticker
 
 # %%
-path = "./pirata_data/"
+path = "../pirata/pirata_data/"
 
 lon_west = 23
 lats_north = ["4", "12"]
@@ -62,8 +62,7 @@ for var in ds_formatted.data_vars:
 if "depth" in ds_formatted.coords:
     ds_formatted = ds_formatted.drop_vars("depth")
 
-# %% Linear fit and residuals histogram
-
+# %%
 residuals_dict = {}
 
 fig, ax = plt.subplots(1, 2, figsize=(10, 5))
