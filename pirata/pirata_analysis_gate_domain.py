@@ -96,7 +96,7 @@ for sel_lat in [4, 12]:
     ax[0].scatter(
         years,
         values,
-        label=f"{sel_lat}°N (fit: °/decade={slope*10:.2f}, $R^2$={r_squared:.2f})",
+        label=f"{sel_lat}°N (fit: °/decade={slope * 10:.2f}, $R^2$={r_squared:.2f})",
     )
     ax[0].plot(years, fit_line, linestyle="--")
 
