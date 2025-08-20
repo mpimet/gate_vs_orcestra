@@ -83,9 +83,12 @@ for sel_lat in [4, 12]:
     sel_t_air_mean = grouped.mean().compute()
 
     # Only keep years with at least 60 data points
-    sel_t_air_mean_filtered = sel_t_air_mean.where(
-        sel_t_air_num >= 60, drop=True
-    ).dropna(dim="year", how="any") + T0
+    sel_t_air_mean_filtered = (
+        sel_t_air_mean.where(sel_t_air_num >= 60, drop=True).dropna(
+            dim="year", how="any"
+        )
+        + T0
+    )
 
     print(
         f"{sel_lat}°N: {len(sel_t_air_mean_filtered.values)} years of data from {int(sel_t_air_mean_filtered.year[0].values)} to {int(sel_t_air_mean_filtered.year[-1].values)}"
