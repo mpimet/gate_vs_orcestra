@@ -62,6 +62,8 @@ for var in ds_formatted.data_vars:
 if "depth" in ds_formatted.coords:
     ds_formatted = ds_formatted.drop_vars("depth")
 
+ds_formatted = ds_formatted.compute()
+ds_formatted = ds_formatted.where(ds_formatted.q_t_air.isin([1, 2]), drop=True)
 # %%
 residuals_dict = {}
 
@@ -78,7 +80,11 @@ for sel_lat in [4, 12]:
     # Only keep years with at least 60 data points
     sel_t_air_mean_filtered = sel_t_air_mean.where(
         sel_t_air_num >= 60, drop=True
-    ).dropna(dim="year")
+    ).dropna(dim="year", how="any")
+
+    print(
+        f"{sel_lat}°N: {len(sel_t_air_mean_filtered.values)} years of data from {int(sel_t_air_mean_filtered.year[0].values)} to {int(sel_t_air_mean_filtered.year[-1].values)}"
+    )
 
     years = sel_t_air_mean_filtered["year"].values
     values = sel_t_air_mean_filtered.values
@@ -90,7 +96,7 @@ for sel_lat in [4, 12]:
     ax[0].scatter(
         years,
         values,
-        label=f"{sel_lat}°N (fit: slope={slope:.2f}, $R^2$={r_squared:.2f})",
+        label=f"{sel_lat}°N (fit: °/decade={slope * 10:.2f}, $R^2$={r_squared:.2f})",
     )
     ax[0].plot(years, fit_line, linestyle="--")
 
