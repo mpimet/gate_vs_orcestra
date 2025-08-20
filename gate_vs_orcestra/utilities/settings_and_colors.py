@@ -9,6 +9,8 @@ colors = {
     "merra": "#6C9600",
     "era": "#98D500",
     "best": "#233100",
+    "pirata12": "#DB7F87",
+    "pirata4": "#806A6C",
 }
 
 

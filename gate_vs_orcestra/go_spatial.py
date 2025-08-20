@@ -10,7 +10,7 @@ import cartopy.feature as cfeature
 
 import utilities.data_utils as dus
 import utilities.preprocessing as dpp
-from utilities.settings_and_colors import colors, gate_B, gate_A, percusion_E
+from utilities.settings_and_colors import colors, gate_A, percusion_E
 
 # %%
 # - load gate sounding data
@@ -129,21 +129,12 @@ gl.ylocator = mticker.FixedLocator([])
 ax.set_xlabel("longitude / $^\\circ$W")
 ax.set_ylabel("latitude / $^\\circ$N")
 
-gate_color = "k"
-ax.plot(gate_B[:, 0], gate_B[:, 1], color="k", lw=1, label="GATE B Array")
 ax.plot(
-    gate_A[:3, 0], gate_A[:3, 1], color="k", lw=1, ls="dashed", label="GATE A/B Array"
+    gate_A[:3, 0], gate_A[:3, 1], color="k", lw=1, ls="solid", label="GATE A/B Array"
 )
-ax.plot(gate_A[3:, 0], gate_A[3:, 1], color="k", lw=1, ls="dashed")
-ax.plot(
-    percusion_E[:2, 0],
-    percusion_E[:2, 1],
-    color="k",
-    lw=1,
-    ls="dotted",
-    label="ORCESTRA East",
-)
-ax.plot(percusion_E[2:, 0], percusion_E[2:, 1], color="k", lw=1, ls="dotted")
+ax.plot(gate_A[3:, 0], gate_A[3:, 1], color="k", lw=1, ls="solid")
+ax.plot(percusion_E[:2, 0], percusion_E[:2, 1], color="k", lw=1, ls="solid")
+ax.plot(percusion_E[2:, 0], percusion_E[2:, 1], color="k", lw=1, ls="solid")
 
 h_g1 = mlines.Line2D(
     [],
@@ -206,8 +197,34 @@ h_b2 = mlines.Line2D(
     label=f"HALO ($n=${nbso})",
 )
 
+h_p1 = mlines.Line2D(
+    [],
+    [],
+    color="#DB7F87",
+    marker="*",
+    linestyle="None",
+    markersize=4,
+    alpha=1,
+    label="PIRATA (-23ºE, 12ºN)",
+)
+
+h_p2 = mlines.Line2D(
+    [],
+    [],
+    color="#806A6C",
+    marker="*",
+    linestyle="None",
+    markersize=4,
+    alpha=1,
+    label="PIRATA (-23ºE, 4ºN)",
+)
+
 ax.legend(
-    ncol=3, loc="upper left", handles=[h_r1, h_r2, h_b1, h_b2, h_g1, h_g2], fontsize=6
+    bbox_to_anchor=(-0.15, 1.07),
+    ncol=2,
+    loc="upper left",
+    handles=[h_g2, h_b2, h_r2, h_p2, h_g1, h_b1, h_r1, h_p1],
+    fontsize=6,
 )
 
 xticks = [-34, -27.0, -23.5, -20]
@@ -217,41 +234,38 @@ ax.set_xlabel("longitude / $^\\circ$W")
 ax.set_yticks(yticks)
 ax.set_ylabel("latitude / $^\\circ$N")
 
+for xlat in [4, 12]:
+    ax.scatter(
+        [-23],
+        [xlat],
+        s=5,
+        edgecolors=colors["pirata" + str(xlat)],
+        facecolors=colors["pirata" + str(xlat)],
+        linewidth=1.0,
+        transform=ccrs.PlateCarree(),
+        marker="o",
+    )
+
 ax.annotate(
-    "GATE B array",
-    xy=gate_B[4],
-    xytext=(-21.8, 12),
+    "Dakar",
+    xy=(-17.467686, 14.716677),
+    xytext=(-20.5, 15.5),
     fontsize=8,
+    color="k",
     arrowprops=dict(arrowstyle="->", color="k"),
 )
 
-# ax.annotate(
-#     "Dakar",
-#     xy=(-17.467686,14.716677),
-#     xytext=(-20.5,14),
-#     fontsize=8,
-#     arrowprops=dict(arrowstyle="->", color='k')
-# )
-
 ax.annotate(
-    "Praia",
-    xy=(-23.51254, 14.93152),
-    xytext=(-22.5, 14.2),
+    "Sal",
+    xy=(-22.916663, 16.8499966),
+    xytext=(-21.5, 17.0),
     fontsize=8,
+    color="k",
     arrowprops=dict(arrowstyle="->", color="k"),
 )
 
-ax.annotate(
-    "GATE A/B array",
-    xy=(-20.5, 5.5),
-    fontsize=8,
-)
-ax.annotate(
-    "ORCESTRA East",
-    xy=(-35.5, 13.7),
-    fontsize=8,
-)
-
+ax.annotate("GATE A/B array", xy=(-20.3, 9.55), fontsize=8)
+ax.annotate("ORCESTRA East", xy=(-35.5, 12.5), fontsize=8)
 plt.savefig("plots/gate-orcestra-sondes.pdf")
 
 # %%
