@@ -200,7 +200,7 @@ h_b2 = mlines.Line2D(
 h_p1 = mlines.Line2D(
     [],
     [],
-    color="#DB7F87",
+    color=colors["pirata12"],
     marker="*",
     linestyle="None",
     markersize=4,
