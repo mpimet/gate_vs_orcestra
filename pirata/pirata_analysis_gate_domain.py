@@ -6,6 +6,7 @@ import random
 import numpy as np
 from scipy.stats import linregress
 import matplotlib.ticker as mticker
+from utilities.settings_and_colors import colors
 
 # %%
 path = "../pirata/pirata_data/"
@@ -13,6 +14,8 @@ path = "../pirata/pirata_data/"
 lon_west = 23
 lats_north = ["4", "12"]
 temp_res = "dy"
+
+T0 = 273.15
 # %% Loading and reformatting the data
 
 var_help = {
@@ -69,6 +72,8 @@ residuals_dict = {}
 
 fig, ax = plt.subplots(1, 2, figsize=(10, 5))
 
+Tmax = {}
+Tmin = {}
 for sel_lat in [4, 12]:
     sel_t_air = ds_formatted["t_air"].sel(lon=337, lat=sel_lat)
     sel_t_air = sel_t_air.where(sel_t_air["time.month"].isin([8, 9]), drop=True)
@@ -78,9 +83,12 @@ for sel_lat in [4, 12]:
     sel_t_air_mean = grouped.mean().compute()
 
     # Only keep years with at least 60 data points
-    sel_t_air_mean_filtered = sel_t_air_mean.where(
-        sel_t_air_num >= 60, drop=True
-    ).dropna(dim="year", how="any")
+    sel_t_air_mean_filtered = (
+        sel_t_air_mean.where(sel_t_air_num >= 60, drop=True).dropna(
+            dim="year", how="any"
+        )
+        + T0
+    )
 
     print(
         f"{sel_lat}°N: {len(sel_t_air_mean_filtered.values)} years of data from {int(sel_t_air_mean_filtered.year[0].values)} to {int(sel_t_air_mean_filtered.year[-1].values)}"
@@ -88,6 +96,8 @@ for sel_lat in [4, 12]:
 
     years = sel_t_air_mean_filtered["year"].values
     values = sel_t_air_mean_filtered.values
+    Tmax[sel_lat] = values.max()
+    Tmin[sel_lat] = values.min()
 
     slope, intercept, r_value, _, _ = linregress(years, values)
     fit_line = slope * years + intercept
@@ -96,32 +106,48 @@ for sel_lat in [4, 12]:
     ax[0].scatter(
         years,
         values,
-        label=f"{sel_lat}°N (fit: °/decade={slope * 10:.2f}, $R^2$={r_squared:.2f})",
+        s=20,
+        marker="o",
+        color=colors["pirata" + str(sel_lat)],
+        label=f"{sel_lat}°N (fit: K/dec={slope * 10:.2f}, $R^2$={r_squared:.2f})",
     )
-    ax[0].plot(years, fit_line, linestyle="--")
+    ax[0].plot(
+        years,
+        fit_line,
+        linestyle="--",
+        color=colors["pirata" + str(sel_lat)],
+        linewidth=1.5,
+    )
 
     residuals_dict[sel_lat] = values - fit_line
 
-ax[0].set_xticks(np.arange(2005, 2030, 5))
-ax[0].spines["bottom"].set_bounds(2005, 2025)
-ax[0].spines["left"].set_bounds(25.5, 28)
+ax[0].set_xticks(np.arange(2006, 2025, 6))
+ax[0].spines["bottom"].set_bounds(2006, 2024)
+ax[0].spines["left"].set_bounds(Tmin[4], Tmax[12])
+ax[0].set_yticks(np.arange(299, 302, 1))
 ax[0].xaxis.set_major_formatter(mticker.FormatStrFormatter("%d"))
 ax[0].set_xlabel("year")
-ax[0].set_ylabel(r"$T_{3\,\mathrm{m}}$ / °C")
+ax[0].set_ylabel(r"$T_{3\,\mathrm{m}}$ / K")
 ax[0].legend()
-ax[0].tick_params(axis="x", rotation=45)
-sn.despine(ax=ax[0])
+ax[0].tick_params(axis="x", rotation=0)
+sn.despine(offset=10, ax=ax[0])
 
 # Residual histogram
 residuals_all = np.concatenate([residuals_dict[4], residuals_dict[12]])
 bins = np.arange(-0.8, 0.9, 0.1)
-
-ax[1].hist(residuals_all, bins=bins, alpha=0.1, color="k")
+for sel_lat in [4, 12]:
+    ax[1].hist(
+        residuals_dict[sel_lat],
+        bins=bins,
+        alpha=0.4,
+        label=f"{sel_lat}°N",
+        color=colors["pirata" + str(sel_lat)],
+    )
 ax[1].set_xlim(-0.82, 0.82)
 ax[1].spines["bottom"].set_bounds(-0.8, 0.8)
 ax[1].axvline(0, linestyle=":", color="k")
 ax[1].set_ylabel("frequency")
-ax[1].set_xlabel(r"residual $T_{3\,\mathrm{m}}$ / °C")
+ax[1].set_xlabel(r"residual $T_{3\,\mathrm{m}}$ / K")
 sn.despine(ax=ax[1])
 
 plt.tight_layout()
@@ -150,7 +176,7 @@ for i_sel, sel_lat in enumerate([4, 12]):
         bins=np.arange(0, 1.5, 0.01),
         density=True,
         cumulative=True,
-        color=f"C{i_sel}",
+        color=colors["pirata" + str(sel_lat)],
         histtype="step",
         label=f"{sel_lat}°N",
     )
