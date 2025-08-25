@@ -161,27 +161,27 @@ for sel_lat in [4, 12]:
 
     residuals_dict[sel_lat] = values - fit_line
 
-year_slice = slice(2006, None)
+year_slice = slice(1974, None)
 
 slope, intercept, r_value, _, _ = linregress(
-    reanalysis_ds.year.sel(year=slice(2006, None)).values,
-    reanalysis_ds["mean"].sel(year=slice(2006, None)).values,
+    reanalysis_ds.year.sel(year=year_slice).values,
+    reanalysis_ds["BEST"].sel(year=year_slice).values,
 )
-reanalysis_ds["mean"].plot(ax=ax[0], marker="x", linestyle="", color=colors["merra2"])
+reanalysis_ds["BEST"].plot(ax=ax[0], marker="x", linestyle="", color=colors["merra2"])
 ax[0].plot(
     reanalysis_ds.year.sel(year=year_slice).values,
     slope * reanalysis_ds.year.sel(year=year_slice).values + intercept,
     linestyle="--",
     color=colors["merra2"],
     linewidth=1.5,
-    label=f"sfc product mean:(fit: K/dec={slope * 10:.2f}, $R^2$={r_squared:.2f})",
+    label=f"BEST:(fit: K/dec={slope * 10:.2f}, $R^2$={r_squared:.2f})",
 )
 print(f"slope for {year_slice}: {slope}")
 slope, intercept, r_value, _, _ = linregress(
-    reanalysis_ds.year.values, reanalysis_ds["mean"].values
+    reanalysis_ds.year.values, reanalysis_ds["BEST"].values
 )
 print("slope whole period", slope)
-rean_resid = reanalysis_ds["mean"] - (slope * reanalysis_ds.year.values + intercept)
+rean_resid = reanalysis_ds["BEST"] - (slope * reanalysis_ds.year.values + intercept)
 """
 slopes = {}
 for name in ["JRA3Q", "ERA5", "MERRA2", "BEST"]:
