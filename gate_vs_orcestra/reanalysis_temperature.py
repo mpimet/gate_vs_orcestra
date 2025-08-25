@@ -2,129 +2,49 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import xarray as xr
 
 import easygems.healpix as egh
-import intake
 from scipy import signal
 import cartopy.crs as ccrs
 import cmocean
 import cartopy.feature as cf
 
-import utilities.data_utils as data
-
+import utilities.preprocessing as pp
 from utilities.settings_and_colors import colors
 
-# %%# %%
-reanalysis = data.open_reanalysis(chunks={}, zoom=7)
 # %%
 
-era = reanalysis["ERA5"]
-extent = egh.get_extent_mask(era, extent=[-27, -20, 5, 12])
-era = era.sel(time=era.time.dt.month.isin([8, 9])).where(extent)
-# %%
-
-
-def ocean(ds):
-    return ds.ocean_fraction_surface == 1
-
-
-cat = intake.open_catalog("https://data.nextgems-h2020.eu/catalog.yaml")
-
-icon = cat.ICON["ngc3028"](zoom=7, chunks="auto").to_dask()
-sea = icon.assign_coords(cell=icon.cell).where(icon.ocean_fraction_surface > 0.9)
+reanalysis_sfc = pp.preprocess_sfc_temperatures()
 
 
 # %%
-era2tocean = (
-    era["2t"].where(~np.isnan(sea.ocean_fraction_surface)).groupby("time.year").mean()
-)
-merra2tocean = reanalysis["MERRA2"]["t2m"].where(~np.isnan(sea.ocean_fraction_surface))
-merra2tocean = (
-    merra2tocean.sel(time=merra2tocean.time.dt.month.isin([8, 9]))
-    .where(extent)
-    .dropna(dim="time", how="all")
-    .groupby("time.year")
-    .mean()
-)
-jra2tocean = reanalysis["JRA3Q"]["mean2t"].where(~np.isnan(sea.ocean_fraction_surface))
-jra2tocean = (
-    jra2tocean.sel(time=jra2tocean.time.dt.month.isin([8, 9]))
-    .where(extent)
-    .isel(time=slice(1, None))
-    .groupby("time.year")
-    .mean()
-)
+detrended = {}
 
-# %%
-best = xr.open_dataset("/work/mh0066/m301046/Data/BEST/Global_TAVG_Gridded_1deg.nc")
+for name in ["ERA5", "MERRA2", "JRA3Q"]:
+    ds = reanalysis_sfc[name]
+    detrended[name] = signal.detrend(ds.mean("cell").sel(year=slice(1974, None)).values)
 
-
-# %%
-def get_useful_times(ds):
-    years = ds.time.astype(int)
-    months = np.ceil((best.time - best.time.astype(int)) * 12).astype(int)
-
-    return ds.assign(
-        time=[
-            np.datetime64(f"{year}-{month:02d}-01")
-            for year, month in zip(years.values, months.values)
-        ]
-    )
-
-
-best_data = get_useful_times(best).sel(latitude=slice(5, 12), longitude=slice(-27, -20))
-
-# %%
-
-best_summer = (
-    best_data.sel(time=best_data.time.dt.month.isin([8, 9])).groupby("time.year").mean()
-)
-# %%
-detrended_era = signal.detrend(
-    era2tocean.mean("cell").sel(year=slice(1974, None)).values,
-)
-detrended_merra = signal.detrend(
-    merra2tocean.mean("cell").values,
-)
-detrended_jra = signal.detrend(
-    jra2tocean.mean("cell").sel(year=slice(1974, None)).values,
-)
-detrended_best = signal.detrend(
-    best_summer.temperature.mean(dim=["latitude", "longitude"])
+detrended["BEST"] = signal.detrend(
+    reanalysis_sfc["BEST"]
+    .temperature.mean(dim=["latitude", "longitude"])
     .sel(year=slice(1974, None))
     .values
 )
 # %%
-std = np.nanstd(
-    np.concatenate([detrended_jra, detrended_merra, detrended_era, detrended_best])
-)
+std = np.nanstd(np.concatenate([vals for vals in detrended.values()]))
 
 # %%
-plt.style.use("./gate.mplstyle")
+plt.style.use("utilities/gate.mplstyle")
 fig, ax = plt.subplots(figsize=(10, 5))
-ax.plot(
-    era2tocean.year.sel(year=slice(1974, None)),
-    detrended_era,
-    label="ERA5",
-    color=colors["era"],
-)
 
-ax.plot(merra2tocean.year, detrended_merra, label="MERRA2", color=colors["merra"])
+for name, vals in detrended.items():
+    ax.plot(
+        reanalysis_sfc[name].sel(year=slice(1974, None)).year,
+        vals,
+        label=name,
+        color=colors[name.lower()] if name.lower() in colors else "k",
+    )
 
-ax.plot(
-    jra2tocean.sel(year=slice(1974, None)).year,
-    detrended_jra,
-    label="JRA3Q",
-    color=colors["jra"],
-)
-
-ax.plot(
-    best_summer.sel(year=slice(1974, None)).year,
-    detrended_best,
-    label="BEST",
-    color=colors["best"],
-)
 
 ax.fill_between(
     np.array([1974, 2025]),
@@ -170,6 +90,6 @@ fig, ax = plt.subplots(
 )
 ax.set_extent([-67, -10, -2, 22], crs=ccrs.PlateCarree())
 
-egh.healpix_show(jra2tocean.mean("year"), ax=ax, cmap=cmocean.cm.thermal)
+egh.healpix_show(reanalysis_sfc["JRA3Q"].mean("year"), ax=ax, cmap=cmocean.cm.thermal)
 ax.add_feature(cf.COASTLINE, linewidth=0.8)
 ax.add_feature(cf.BORDERS, linewidth=0.4)
