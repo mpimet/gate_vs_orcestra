@@ -1,3 +1,4 @@
+import intake
 import numpy as np
 import xarray as xr
 from matplotlib.path import Path
@@ -99,25 +100,38 @@ def preprocess_sfc_temperatures(extent="orcestra_east"):
     reanalysis = data.open_reanalysis(chunks={}, zoom=7)
 
     extent = egh.get_extent_mask(reanalysis["ERA5"], extent=extent)
+    reanalysis["ERA5"] = (
+        reanalysis["ERA5"]
+        .sel(time=reanalysis["ERA5"].time.dt.month.isin([8, 9]))
+        .where(extent)
+    )
+
+    cat = intake.open_catalog("https://data.nextgems-h2020.eu/catalog.yaml")
+
+    icon = cat["ICON"]["ngc3028"](zoom=7, chunks="auto").to_dask()
+    sea = icon.assign_coords(cell=icon.cell).where(icon.ocean_fraction_surface > 0.9)
     temperatures["ERA5"] = (
         reanalysis["ERA5"]["2t"]
-        .sel(time=reanalysis["ERA5"]["2t"].time.dt.month.isin([8, 9]))
-        .where(extent)
+        .where(~np.isnan(sea.ocean_fraction_surface))
         .groupby("time.year")
         .mean()
     )
 
+    merra2tocean = reanalysis["MERRA2"]["t2m"].where(
+        ~np.isnan(sea.ocean_fraction_surface)
+    )
     temperatures["MERRA2"] = (
-        reanalysis["MERRA2"]["t2m"]
-        .sel(time=reanalysis["MERRA2"]["t2m"].time.dt.month.isin([8, 9]))
+        merra2tocean.sel(time=merra2tocean.time.dt.month.isin([8, 9]))
         .where(extent)
         .dropna(dim="time", how="all")
         .groupby("time.year")
         .mean()
     )
+    jra2tocean = reanalysis["JRA3Q"]["mean2t"].where(
+        ~np.isnan(sea.ocean_fraction_surface)
+    )
     temperatures["JRA3Q"] = (
-        reanalysis["JRA3Q"]["mean2t"]
-        .sel(time=reanalysis["JRA3Q"]["mean2t"].time.dt.month.isin([8, 9]))
+        jra2tocean.sel(time=jra2tocean.time.dt.month.isin([8, 9]))
         .where(extent)
         .isel(time=slice(1, None))
         .groupby("time.year")
