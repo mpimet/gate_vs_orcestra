@@ -7,6 +7,46 @@ import numpy as np
 from scipy.stats import linregress
 import matplotlib.ticker as mticker
 from utilities.settings_and_colors import colors
+import utilities.preprocessing as pp
+
+
+# %%
+reanalysis_sfc = pp.preprocess_sfc_temperatures()
+
+# %%
+best_test = (
+    reanalysis_sfc["BEST"].temperature
+    + reanalysis_sfc["BEST"].climatology.sel(year=slice(1961, 1990)).mean()
+    + 273.15
+)
+reanalysis_ds = xr.merge(
+    [
+        xr.merge(
+            [
+                reanalysis_sfc[name]
+                .sel(year=slice(1974, None))
+                .mean("cell")
+                .rename(name)
+                for name in ["JRA3Q", "ERA5", "MERRA2"]
+            ]
+        ),
+        best_test.mean(["latitude", "longitude"])
+        .sel(year=slice(1974, None))
+        .rename("BEST"),
+    ]
+)
+reanalysis_ds = reanalysis_ds.assign(
+    mean=(
+        ("year"),
+        np.nanmean([reanalysis_ds[name] for name in reanalysis_ds.keys()], axis=0),
+    ),
+    std=(
+        ("year"),
+        np.nanstd([reanalysis_ds[name] for name in reanalysis_ds.keys()], axis=0),
+    ),
+)
+
+# %%
 
 # %%
 path = "../pirata/pirata_data/"
@@ -121,8 +161,45 @@ for sel_lat in [4, 12]:
 
     residuals_dict[sel_lat] = values - fit_line
 
-ax[0].set_xticks(np.arange(2006, 2025, 6))
-ax[0].spines["bottom"].set_bounds(2006, 2024)
+year_slice = slice(2006, None)
+
+slope, intercept, r_value, _, _ = linregress(
+    reanalysis_ds.year.sel(year=slice(2006, None)).values,
+    reanalysis_ds["mean"].sel(year=slice(2006, None)).values,
+)
+reanalysis_ds["mean"].plot(ax=ax[0], marker="x", linestyle="", color=colors["merra2"])
+ax[0].plot(
+    reanalysis_ds.year.sel(year=year_slice).values,
+    slope * reanalysis_ds.year.sel(year=year_slice).values + intercept,
+    linestyle="--",
+    color=colors["merra2"],
+    linewidth=1.5,
+    label=f"sfc product mean:(fit: K/dec={slope * 10:.2f}, $R^2$={r_squared:.2f})",
+)
+print(f"slope for {year_slice}: {slope}")
+slope, intercept, r_value, _, _ = linregress(
+    reanalysis_ds.year.values, reanalysis_ds["mean"].values
+)
+print("slope whole period", slope)
+rean_resid = reanalysis_ds["mean"] - (slope * reanalysis_ds.year.values + intercept)
+"""
+slopes = {}
+for name in ["JRA3Q", "ERA5", "MERRA2", "BEST"]:
+    #rean_ds.plot(ax=ax[0], marker="x", linestyle="", color=colors[name.lower()])
+    rean_ds = reanalysis_ds[name].dropna(dim="year", how="any")
+    slope, intercept, r_value, _, _ = linregress(rean_ds.year.sel(year=year_slice).values, rean_ds.sel(year=year_slice).values)
+    ax[0].plot(
+        rean_ds.year.sel(year=year_slice).values,
+        slope * rean_ds.year.sel(year=year_slice).values + intercept,
+        linestyle="--",
+        color=colors[name.lower()],
+        linewidth=1.5,
+        label=name
+    )
+    slopes[name] = slope
+"""
+ax[0].set_xticks(np.arange(1974, 2025, 6))
+ax[0].spines["bottom"].set_bounds(1974, 2024)
 ax[0].spines["left"].set_bounds(Tmin[4], Tmax[12])
 ax[0].set_yticks(np.arange(299, 302, 1))
 ax[0].xaxis.set_major_formatter(mticker.FormatStrFormatter("%d"))
@@ -131,7 +208,6 @@ ax[0].set_ylabel(r"$T_{3\,\mathrm{m}}$ / K")
 ax[0].legend()
 ax[0].tick_params(axis="x", rotation=0)
 sn.despine(offset=10, ax=ax[0])
-
 # Residual histogram
 residuals_all = np.concatenate([residuals_dict[4], residuals_dict[12]])
 bins = np.arange(-0.8, 0.9, 0.1)
@@ -140,13 +216,22 @@ for sel_lat in [4, 12]:
         residuals_dict[sel_lat],
         bins=bins,
         alpha=0.4,
+        density=True,
         label=f"{sel_lat}°N",
         color=colors["pirata" + str(sel_lat)],
     )
+ax[1].hist(
+    rean_resid,
+    bins=bins,
+    alpha=0.4,
+    label="reanalysis",
+    density=True,
+    color=colors["merra2"],
+)
 ax[1].set_xlim(-0.82, 0.82)
 ax[1].spines["bottom"].set_bounds(-0.8, 0.8)
 ax[1].axvline(0, linestyle=":", color="k")
-ax[1].set_ylabel("frequency")
+ax[1].set_ylabel("density")
 ax[1].set_xlabel(r"residual $T_{3\,\mathrm{m}}$ / K")
 sn.despine(ax=ax[1])
 
