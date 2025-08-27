@@ -169,7 +169,42 @@ ax.text(
     rotation=90,
 )
 
+print("orcestra pseudo", orc_pseudo.iwv.values)
+print("gate pseudo", gate_pseudo.iwv.values)
+
+mean_pseudo = (orc_pseudo.iwv + gate_pseudo.iwv).values / 2
+diff_pseudo = (orc_pseudo.iwv - gate_pseudo.iwv).values
+
+mean_campaigns = (
+    datasets["orcestra"].iwv.median() + datasets["gate"].iwv.median()
+).values / 2
+diff_campaigns = datasets["orcestra"].iwv.median() - datasets["gate"].iwv.median()
+
+ax.annotate(
+    "{:.2f}".format(diff_pseudo),
+    xy=(mean_pseudo, 0.205),
+    xytext=(mean_pseudo, 0.21),
+    fontsize=14,
+    ha="center",
+    va="bottom",
+    arrowprops=dict(arrowstyle=f"-[, widthB=2, lengthB=.1", lw=2.0),
+)
+
+ax.annotate(
+    "{:.2f}".format(diff_campaigns),
+    xy=(mean_campaigns, 0.21),
+    xytext=(mean_campaigns, 0.212),
+    fontsize=14,
+    ha="center",
+    va="bottom",
+    alpha=0.5,
+    arrowprops=dict(arrowstyle=f"-[, widthB=2, lengthB=.1", lw=2.0, color="gray"),
+)
+
+ax.set_ylim(0, 0.218)
 ax.legend()
+ax.set_yticks(ticks=np.arange(0, 0.2, 0.025))
+ax.spines["left"].set_bounds(-0.0, 0.19)
 sns.despine(offset={"left": 5})
 ax.set_xlabel("IWV / kg m$^{-2}$")
 fig.savefig("images/iwv_histograms.pdf", bbox_inches="tight")
