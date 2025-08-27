@@ -47,9 +47,7 @@ reanalysis_ds = reanalysis_ds.assign(
 )
 
 # %%
-
-# %%
-path = "../pirata/pirata_data/"
+path = "pirata/pirata_data/"
 
 lon_west = 23
 lats_north = ["4", "12"]
@@ -167,14 +165,19 @@ slope, intercept, r_value, _, _ = linregress(
     reanalysis_ds.year.sel(year=year_slice).values,
     reanalysis_ds["BEST"].sel(year=year_slice).values,
 )
-reanalysis_ds["BEST"].plot(ax=ax[0], marker="x", linestyle="", color=colors["merra2"])
+reanalysis_ds["BEST"].plot(
+    ax=ax[0],
+    marker="x",
+    linestyle="",
+    color=colors["merra2"],
+    label=f"BEST:(fit: K/dec={slope * 10:.2f}, $R^2$={r_squared:.2f})",
+)
 ax[0].plot(
     reanalysis_ds.year.sel(year=year_slice).values,
     slope * reanalysis_ds.year.sel(year=year_slice).values + intercept,
     linestyle="--",
     color=colors["merra2"],
     linewidth=1.5,
-    label=f"BEST:(fit: K/dec={slope * 10:.2f}, $R^2$={r_squared:.2f})",
 )
 print(f"slope for {year_slice}: {slope}")
 slope, intercept, r_value, _, _ = linregress(
@@ -236,7 +239,7 @@ ax[1].set_xlabel(r"residual $T_{3\,\mathrm{m}}$ / K")
 sn.despine(ax=ax[1])
 
 plt.tight_layout()
-# plt.savefig("pirata_linear_fit.pdf", bbox_inches="tight", dpi=300)
+plt.savefig("pirata_linear_fit.pdf", bbox_inches="tight", dpi=300)
 
 # %% Difference between two randomly selected years (without replacement)
 
