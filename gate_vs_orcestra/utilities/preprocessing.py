@@ -1,7 +1,10 @@
 import numpy as np
+import xarray as xr
 from matplotlib.path import Path
 from utilities.settings_and_colors import gate_A, percusion_E
 import moist_thermodynamics.functions as mt
+import utilities.data_utils as data
+import easygems.healpix as egh
 
 
 def sel_sub_domain(
@@ -85,3 +88,62 @@ def extrapolate_sfc(ds):
         rh=mt.specific_humidity_to_relative_humidity(ds.q, ds.p, ds.ta),
     )
     return ds
+
+
+def preprocess_sfc_temperatures(extent="orcestra_east"):
+    if extent == "orcestra_east":
+        extent = [-34, -20, 3.5, 13.5]
+    if extent == "gate_ab":
+        extent = [-27, -20, 5, 12]
+    temperatures = {}
+    reanalysis = data.open_reanalysis(chunks={}, zoom=7)
+
+    extent = egh.get_extent_mask(reanalysis["ERA5"], extent=extent)
+    temperatures["ERA5"] = (
+        reanalysis["ERA5"]["2t"]
+        .sel(time=reanalysis["ERA5"]["2t"].time.dt.month.isin([8, 9]))
+        .where(extent)
+        .groupby("time.year")
+        .mean()
+    )
+
+    temperatures["MERRA2"] = (
+        reanalysis["MERRA2"]["t2m"]
+        .sel(time=reanalysis["MERRA2"]["t2m"].time.dt.month.isin([8, 9]))
+        .where(extent)
+        .dropna(dim="time", how="all")
+        .groupby("time.year")
+        .mean()
+    )
+    temperatures["JRA3Q"] = (
+        reanalysis["JRA3Q"]["mean2t"]
+        .sel(time=reanalysis["JRA3Q"]["mean2t"].time.dt.month.isin([8, 9]))
+        .where(extent)
+        .isel(time=slice(1, None))
+        .groupby("time.year")
+        .mean()
+    )
+
+    best = xr.open_dataset("/work/mh0066/m301046/Data/BEST/Global_TAVG_Gridded_1deg.nc")
+
+    def get_useful_times(ds):
+        years = ds.time.astype(int)
+        months = np.ceil((best.time - best.time.astype(int)) * 12).astype(int)
+
+        return ds.assign(
+            time=[
+                np.datetime64(f"{year}-{month:02d}-01")
+                for year, month in zip(years.values, months.values)
+            ]
+        )
+
+    best_data = get_useful_times(best).sel(
+        latitude=slice(5, 12), longitude=slice(-27, -20)
+    )
+
+    temperatures["BEST"] = (
+        best_data.sel(time=best_data.time.dt.month.isin([8, 9]))
+        .groupby("time.year")
+        .mean()
+    )
+    return temperatures
