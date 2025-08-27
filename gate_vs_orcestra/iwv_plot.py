@@ -97,6 +97,7 @@ q_orc = mtf.relative_humidity_to_specific_humidity(
     T=orc_pseudo.ta.swap_dims({"altitude": "p"}),
 )
 orc_pseudo = calc_iwv(orc_pseudo.assign(q=("altitude", q_orc.values)))
+
 # %%
 plt.style.use("utilities/gate.mplstyle")
 fig, ax = plt.subplots(figsize=(6, 5.5))
@@ -110,22 +111,35 @@ for name in ["rapsodi", "beach", "gate"]:
         color=colors[name],
     )
 
-ax.axvline(x=datasets["orcestra"].iwv.mean(), color="#6d88bc", linestyle="-", alpha=0.5)
+print("orcestra median", datasets["orcestra"].iwv.median().values)
+print("gate median", datasets["gate"].iwv.median().values)
+
+ax.axvline(
+    x=datasets["orcestra"].iwv.median(),
+    ymax=0.91,
+    color="#6d88bc",
+    linestyle="-",
+    alpha=0.5,
+)
 ax.text(
-    x=datasets["orcestra"].iwv.mean(),
+    x=datasets["orcestra"].iwv.median(),
     y=0.2,
     s="Orcestra",
     color="#6d88bc",
-    ha="right",
+    ha="left",
     va="top",
     rotation=90,
 )
 
 ax.axvline(
-    x=datasets["gate"].iwv.mean(), color=colors["gate"], linestyle="-", alpha=0.5
+    x=datasets["gate"].iwv.median(),
+    ymax=0.91,
+    color=colors["gate"],
+    linestyle="-",
+    alpha=0.5,
 )
 ax.text(
-    x=datasets["gate"].iwv.mean(),
+    x=datasets["gate"].iwv.median(),
     y=0.2,
     s="Gate",
     color=colors["gate"],
@@ -134,7 +148,7 @@ ax.text(
     rotation=90,
 )
 
-ax.axvline(orc_pseudo.iwv, color="k", linestyle="--")
+ax.axvline(orc_pseudo.iwv, ymax=0.9, color="k", linestyle="--")
 ax.text(
     x=orc_pseudo.iwv + 0.3,
     y=0.2,
@@ -144,7 +158,7 @@ ax.text(
     va="top",
     rotation=90,
 )
-ax.axvline(gate_pseudo.iwv, color="k", linestyle="--")
+ax.axvline(gate_pseudo.iwv, ymax=0.9, color="k", linestyle="--")
 ax.text(
     x=gate_pseudo.iwv + 0.3,
     y=0.2,
@@ -157,3 +171,6 @@ ax.text(
 
 ax.legend()
 sns.despine(offset={"left": 5})
+ax.set_xlabel("IWV / kg m$^{-2}$")
+fig.savefig("images/iwv_histograms.pdf", bbox_inches="tight")
+# %%
