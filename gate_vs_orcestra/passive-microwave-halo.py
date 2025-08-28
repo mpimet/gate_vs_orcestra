@@ -12,101 +12,23 @@ import numpy as np
 
 import xarray as xr
 
-# %%
 
-
-gate_A = np.array(
-    [
-        [-27.0, 6.5],
-        [-23.5, 5.0],
-        [-20.0, 6.5],
-        [-20.0, 10.5],
-        [-23.5, 12.0],
-        [-27.0, 10.5],
-    ]
-)
-
-percusion_E = np.array([[-34.0, 13.5], [-20.0, 13.5], [-20.0, 3.5], [-34.0, 3.5]])
-
-
-def open_radiosondes(cid):
-    ds = xr.open_dataset(f"ipfs://{cid}", engine="zarr")
-    return (
-        ds.rename(
-            {
-                "alt": "altitude",
-                "sounding": "sonde_id",
-                "flight_time": "bin_average_time",
-                "flight_lat": "latitude",
-                "flight_lon": "longitude",
-                "platform": "platform_id",
-            }
-        )
-        .reset_coords(["p", "latitude", "longitude", "bin_average_time", "sonde_id"])
-        .drop_dims(["nv"])
-        .swap_dims({"launch_time": "sonde"})
-    )
-
-
-def open_gate(cid):
-    ds = xr.open_dataset(f"ipfs://{cid}", engine="zarr")
-    return (
-        ds.set_coords(["launch_lat", "launch_lon", "launch_time"])
-        .swap_dims({"sonde": "launch_time"})
-        .sel(launch_time=slice("1974-08-10", "1974-09-30"))
-        .swap_dims({"launch_time": "sonde"})
-    )
-
-
-def get_cids():
-    orcestra_main = "QmPNVTb5fcN59XUi2dtUZknPx5HNnknBC2x4n7dtxuLdwi"
-    return {
-        "gate": "QmWFfuLW7VSqEFrAwaJr1zY9CzWqF4hC22yqgXELmY133K",
-        "orcestra": orcestra_main,
-        "radiosondes": f"{orcestra_main}/Radiosondes/RAPSODI_RS_ORCESTRA_level2.zarr",
-        "dropsondes": f"{orcestra_main}/HALO/dropsondes/Level_3/PERCUSION_Level_3.zarr",
-    }
-
-
-def sel_sub_domain(
-    ds, polygon, item_var="sonde", lon_var="launch_lon", lat_var="launch_lat"
-):
-    """
-    select points from dataset that lie within the polygon
-    """
-    from matplotlib.path import Path
-
-    points = np.column_stack([ds[lon_var].values, ds[lat_var].values])
-    inside = Path(polygon).contains_points(points)
-    return ds.sel(**{item_var: inside})
-
-
-def sel_gate_A(ds, **kwargs):
-    """
-    select points from dataset that lie within the gate_A polygon
-    """
-    return sel_sub_domain(ds, gate_A, **kwargs)
-
-
-def sel_percusion_E(ds, **kwargs):
-    """
-    select points from dataset that lie within the percusion_E polygon
-    """
-    return sel_sub_domain(ds, percusion_E, **kwargs)
+import utilities.data_utils as data
+import utilities.preprocessing as pp
 
 
 # %%
-cids = get_cids()
+cids = data.get_cids()
 rs = (
-    open_radiosondes(cids["radiosondes"])
-    .pipe(sel_percusion_E)
+    data.open_radiosondes(cids["radiosondes"])
+    .pipe(pp.sel_percusion_E)
     .mean(dim="sonde")
     .coarsen(altitude=10, boundary="trim")
     .mean()
 )
 gs = (
-    open_gate(cids["gate"])
-    .pipe(sel_percusion_E)
+    data.open_gate(cids["gate"])
+    .pipe(pp.sel_percusion_E)
     .mean(dim="sonde")
     .coarsen(altitude=10, boundary="trim")
     .mean()
@@ -273,7 +195,7 @@ hamp = (
         "ipfs://bafybeicbj76n3hi52pxtcyzu5in7efk36fk7lavauishclybrsbvlrpq3e",
         engine="zarr",
     ).set_coords(({"lat", "lon", "time"}))
-).pipe(sel_percusion_E, item_var="time", lon_var="lon", lat_var="lat")
+).pipe(pp.sel_percusion_E, item_var="time", lon_var="lon", lat_var="lat")
 
 # %%
 halo_TB = hamp.sel(frequency=53.75).where(np.abs(hamp.plane_roll) < 5, drop=True).TBs
