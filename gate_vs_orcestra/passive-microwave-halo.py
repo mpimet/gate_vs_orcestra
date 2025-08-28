@@ -6,7 +6,7 @@ import os
 os.environ["PAMTRA_DATADIR"] = "/Users/m219063/work/pamtra/pamtra_data"
 import seaborn as sns
 
-from python import pyPamtra
+import pyPamtra
 import matplotlib.pyplot as plt
 import numpy as np
 
