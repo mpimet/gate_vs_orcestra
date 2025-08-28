@@ -22,3 +22,10 @@ spack load /tpmfvwu # openblas
 CC=gcc uv run pip install git+https://github.com/igmk/pamtra
 ``` 
 
+On a MAC, 
+```
+brew install openblas pkgconf netcdf fftw gcc@14
+export PKG_CONFIG_PATH="/opt/homebrew/opt/openblas/lib/pkgconfig"
+CC=gcc-14 uv run pip install git+https://github.com/igmk/pamtra
+```
+Other gcc versions can also be used, however, they apparently have to be smaller than 15. 
