@@ -1,0 +1,249 @@
+{
+    "metadata": {
+        ".zattrs": {
+            "Conventions": "Berkeley Earth Internal Convention (based on CF-1.5)",
+            "comment": "This file contains surface temperature anomaly field gridded on a 1\u00b0 (longitude) by 1\u00b0 (latitude) grid-box basis.",
+            "file_creation": "18-Jun-2025 01:56:52",
+            "institution": "Berkeley Earth",
+            "land_source_analysis_date": "04-Jun-2025 10:59:56",
+            "ocean_source_analysis_date": "10-Mar-2025 07:28:28",
+            "title": "Berkeley Earth Surface Temperature Anomaly Field"
+        },
+        ".zgroup": {
+            "zarr_format": 2
+        },
+        "areal_weight/.zarray": {
+            "chunks": [
+                175,
+                7,
+                7
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f8",
+            "fill_value": "NaN",
+            "filters": null,
+            "order": "C",
+            "shape": [
+                175,
+                7,
+                7
+            ],
+            "zarr_format": 2
+        },
+        "areal_weight/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "year",
+                "latitude",
+                "longitude"
+            ],
+            "long_name": "Grid Cell Weight",
+            "missing_value": NaN,
+            "standard_name": "areal_weight",
+            "units": "none",
+            "valid_max": 0.011453332526558398,
+            "valid_min": 0.011453332526558398
+        },
+        "climatology/.zarray": {
+            "chunks": [
+                88,
+                12,
+                7,
+                7
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f4",
+            "fill_value": "NaN",
+            "filters": null,
+            "order": "C",
+            "shape": [
+                175,
+                12,
+                7,
+                7
+            ],
+            "zarr_format": 2
+        },
+        "climatology/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "year",
+                "month_number",
+                "latitude",
+                "longitude"
+            ],
+            "coordinates": "latitude longitude",
+            "long_name": "Air Surface Temperature Climatology (Jan 1951 - Dec 1980)",
+            "missing_value": NaN,
+            "standard_name": "surface_temperature_climatology",
+            "units": "degree C",
+            "valid_max": 38.46059799194336,
+            "valid_min": -69.55117797851562
+        },
+        "land_mask/.zarray": {
+            "chunks": [
+                175,
+                7,
+                7
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f8",
+            "fill_value": "NaN",
+            "filters": null,
+            "order": "C",
+            "shape": [
+                175,
+                7,
+                7
+            ],
+            "zarr_format": 2
+        },
+        "land_mask/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "year",
+                "latitude",
+                "longitude"
+            ],
+            "long_name": "Land Mask",
+            "missing_value": NaN,
+            "standard_name": "land_mask",
+            "units": "none",
+            "valid_max": 1.0000001192092896,
+            "valid_min": 0.0
+        },
+        "latitude/.zarray": {
+            "chunks": [
+                7
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f4",
+            "fill_value": "NaN",
+            "filters": null,
+            "order": "C",
+            "shape": [
+                7
+            ],
+            "zarr_format": 2
+        },
+        "latitude/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "latitude"
+            ],
+            "long_name": "Latitude",
+            "standard_name": "latitude",
+            "units": "degrees_north"
+        },
+        "longitude/.zarray": {
+            "chunks": [
+                7
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f4",
+            "fill_value": "NaN",
+            "filters": null,
+            "order": "C",
+            "shape": [
+                7
+            ],
+            "zarr_format": 2
+        },
+        "longitude/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "longitude"
+            ],
+            "long_name": "Longitude",
+            "standard_name": "longitude",
+            "units": "degrees_east"
+        },
+        "temperature/.zarray": {
+            "chunks": [
+                175,
+                7,
+                7
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f4",
+            "fill_value": "NaN",
+            "filters": null,
+            "order": "C",
+            "shape": [
+                175,
+                7,
+                7
+            ],
+            "zarr_format": 2
+        },
+        "temperature/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "year",
+                "latitude",
+                "longitude"
+            ],
+            "long_name": "Air Surface Temperature Anomaly",
+            "standard_name": "surface_temperature_anomaly",
+            "units": "degree C",
+            "valid_max": 21.16006088256836,
+            "valid_min": -23.235980987548828
+        },
+        "year/.zarray": {
+            "chunks": [
+                175
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<i8",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                175
+            ],
+            "zarr_format": 2
+        },
+        "year/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "year"
+            ]
+        }
+    },
+    "zarr_consolidated_format": 1
+}
