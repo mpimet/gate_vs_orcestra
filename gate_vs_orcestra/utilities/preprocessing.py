@@ -125,6 +125,7 @@ def preprocess_sfc_temperatures(extent="orcestra_east"):
         .groupby("time.year")
         .mean()
     )
+    
     return temperatures
 
 
@@ -214,4 +215,5 @@ def get_pirata():
         pirata = pirata.drop_vars("depth")
 
     pirata = pirata.compute()
+
     return pirata.where(pirata.q_t_air.isin([1, 2]), drop=True)
