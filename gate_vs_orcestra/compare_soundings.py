@@ -12,7 +12,6 @@ import numpy as np
 from moist_thermodynamics import saturation_vapor_pressures as svp
 from moist_thermodynamics import functions as mtf
 from moist_thermodynamics import constants as mtc
-from moist_thermodynamics import utilities as mtu
 import utilities.thermo as thermo
 
 import seaborn as sns
@@ -199,90 +198,13 @@ g_pseudo = thermo.make_sounding_from_adiabat(P, T_gate, q_gate, thx=mtf.theta_e_
 r_wthice = thermo.make_sounding_from_adiabat(P, T_orce, q_orce, integrate=True)
 g_wthice = thermo.make_sounding_from_adiabat(P, T_gate, q_gate, integrate=True)
 
-
-def make_sounding_from_adiabat(
-    P, Tsfc=301.0, qsfc=17e-3, Tmin=200.0, thx=mtf.theta_l, integrate=False
-) -> xr.Dataset:
-    """creates a sounding from a moist adiabat
-
-    Cacluates the moist adiabate based either on an integration or a specified
-    isentrope with pressure as the vertical coordinate.
-
-    Args:
-        P: pressure
-        Tsfc: starting (value at P.max()) temperature
-        qsfc: starting (value at P.max()) specific humidity
-        Tmin: minimum temperature of adiabat
-        thx: function to calculate isentrope if integrate = False
-        integrate: determines if explicit integration will be used.
-    """
-
-    TPq = xr.Dataset(
-        data_vars={
-            "T": (
-                ("levels",),
-                mtu.moist_adiabat_with_ice(
-                    P, Tx=Tsfc, qx=qsfc, Tmin=Tmin, thx=thx, integrate=integrate
-                ),
-                {"units": "K", "standard_name": "air_temperature", "symbol": "$T$"},
-            ),
-            "P": (
-                ("levels",),
-                P,
-                {"units": "Pa", "standard_name": "air_pressure", "symbol": "$P$"},
-            ),
-            "q": (
-                ("levels",),
-                qsfc * np.ones(len(P)),
-                {"units": "1", "standard_name": "specific_humidity", "symbol": "$q$"},
-            ),
-        },
-    )
-    TPq = TPq.assign(
-        altitude=xr.DataArray(
-            mtf.pressure_altitude(TPq.P, TPq.T, qv=TPq.q).values,
-            dims=("levels"),
-            attrs={
-                "units": "m",
-                "standard_name": "altitude",
-                "description": "hydrostatic altitude given the datasets temperature and pressure",
-            },
-        )
-    )
-    TPq = TPq.assign(
-        theta=(
-            TPq.T.dims,
-            mtf.theta(TPq.T, TPq.P).values,
-            {
-                "units": "K",
-                "standard_name": "air_potential_teimerature",
-                "symbol": "$\theta$",
-            },
-        )
-    )
-    TPq = TPq.assign(
-        P0=xr.DataArray(
-            mtc.P0, attrs={"units": "Pa", "standards_name": "referenece_pressure"}
-        )
-    )
-
-    return TPq.set_coords("altitude").swap_dims({"levels": "altitude"})
-
-
-r_consrv = make_sounding_from_adiabat(P, T_orce, q_orce)
-g_consrv = make_sounding_from_adiabat(P, T_gate, q_gate)
-p_pseudo = make_sounding_from_adiabat(P, T_op02, q_op02, thx=mtf.theta_e_bolton)
-r_pseudo = make_sounding_from_adiabat(P, T_orce, q_orce, thx=mtf.theta_e_bolton)
-g_pseudo = make_sounding_from_adiabat(P, T_gate, q_gate, thx=mtf.theta_e_bolton)
-r_wthice = make_sounding_from_adiabat(P, T_orce, q_orce, integrate=True)
-g_wthice = make_sounding_from_adiabat(P, T_gate, q_gate, integrate=True)
-
-r_consrv
 # %%
 # - plot profiles
 #
-sns.set_context(context="talk")
-fig, ax = plt.subplots(1, 3, figsize=(10, 5), sharey=True)
+cw = 190 / 25.4
+
+sns.set_context(context="paper")
+fig, ax = plt.subplots(1, 3, figsize=(cw, cw / 2), sharey=True)
 
 ylim = (0, 21500)
 rlim = (0, 1)
@@ -303,7 +225,7 @@ bs_bar.sel(altitude=slice(None, 12000)).rh.plot(c=colors["beach"], ls="-", **kwa
 gs_bar.rh.plot(c=colors["gate"], ls="-", **kwargs)
 
 ax[1].plot(
-    [halo_rh.quantile(0.34), halo_rh.quantile(0.65)],
+    [halo_rh.quantile(0.35), halo_rh.quantile(0.65)],
     [zbar, zbar],
     lw=2.5,
     c="k",
@@ -363,7 +285,7 @@ for x in ["rapsodi", "gate"]:
     ax[0].axhline(cp_ticks[x], lw=0.75, ls=":", c=colors[x])
     ax[1].hlines(zp_ticks[x], xmin=0.8, xmax=1.0, lw=0.75, ls=":", color=colors[x])
 
-ax[0].legend(fontsize=10)
+ax[0].legend(fontsize=9)
 fig.tight_layout()
 sns.despine(offset=0)
 sns.despine(ax=ax[0], offset=4)
@@ -386,7 +308,7 @@ dtheta_rs = rs_bar.theta - gs_bar.theta
 dtheta_bs = bs_bar.theta - gs_bar.theta
 
 sns.set_context("paper")
-fig, ax = plt.subplots(1, 1, figsize=(3, 4), sharey=True)
+fig, ax = plt.subplots(1, 1, figsize=(cw / 2, cw / 2 * 1.333), sharey=True)
 
 dtheta_rs.plot(ax=ax, y="altitude", ylim=ylim, label="rapsodi", color=colors["rapsodi"])
 dtheta_bs.plot(ax=ax, y="altitude", ylim=ylim, label="beach", color=colors["beach"])
