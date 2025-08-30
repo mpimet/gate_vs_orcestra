@@ -1,4 +1,5 @@
 # %%
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 import xarray as xr
@@ -8,7 +9,9 @@ import moist_thermodynamics.constants as mtc
 
 import utilities.data_utils as data
 import utilities.preprocessing as pp
+
 import utilities.thermo as thermo
+
 from utilities.settings_and_colors import colors
 
 # %%
