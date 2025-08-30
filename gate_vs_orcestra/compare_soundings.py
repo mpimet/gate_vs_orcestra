@@ -12,7 +12,6 @@ import numpy as np
 from moist_thermodynamics import saturation_vapor_pressures as svp
 from moist_thermodynamics import functions as mtf
 from moist_thermodynamics import constants as mtc
-from moist_thermodynamics import utilities as mtu
 import utilities.thermo as thermo
 
 import seaborn as sns
@@ -199,85 +198,6 @@ g_pseudo = thermo.make_sounding_from_adiabat(P, T_gate, q_gate, thx=mtf.theta_e_
 r_wthice = thermo.make_sounding_from_adiabat(P, T_orce, q_orce, integrate=True)
 g_wthice = thermo.make_sounding_from_adiabat(P, T_gate, q_gate, integrate=True)
 
-
-def make_sounding_from_adiabat(
-    P, Tsfc=301.0, qsfc=17e-3, Tmin=200.0, thx=mtf.theta_l, integrate=False
-) -> xr.Dataset:
-    """creates a sounding from a moist adiabat
-
-    Cacluates the moist adiabate based either on an integration or a specified
-    isentrope with pressure as the vertical coordinate.
-
-    Args:
-        P: pressure
-        Tsfc: starting (value at P.max()) temperature
-        qsfc: starting (value at P.max()) specific humidity
-        Tmin: minimum temperature of adiabat
-        thx: function to calculate isentrope if integrate = False
-        integrate: determines if explicit integration will be used.
-    """
-
-    TPq = xr.Dataset(
-        data_vars={
-            "T": (
-                ("levels",),
-                mtu.moist_adiabat_with_ice(
-                    P, Tx=Tsfc, qx=qsfc, Tmin=Tmin, thx=thx, integrate=integrate
-                ),
-                {"units": "K", "standard_name": "air_temperature", "symbol": "$T$"},
-            ),
-            "P": (
-                ("levels",),
-                P,
-                {"units": "Pa", "standard_name": "air_pressure", "symbol": "$P$"},
-            ),
-            "q": (
-                ("levels",),
-                qsfc * np.ones(len(P)),
-                {"units": "1", "standard_name": "specific_humidity", "symbol": "$q$"},
-            ),
-        },
-    )
-    TPq = TPq.assign(
-        altitude=xr.DataArray(
-            mtf.pressure_altitude(TPq.P, TPq.T, qv=TPq.q).values,
-            dims=("levels"),
-            attrs={
-                "units": "m",
-                "standard_name": "altitude",
-                "description": "hydrostatic altitude given the datasets temperature and pressure",
-            },
-        )
-    )
-    TPq = TPq.assign(
-        theta=(
-            TPq.T.dims,
-            mtf.theta(TPq.T, TPq.P).values,
-            {
-                "units": "K",
-                "standard_name": "air_potential_teimerature",
-                "symbol": "$\theta$",
-            },
-        )
-    )
-    TPq = TPq.assign(
-        P0=xr.DataArray(
-            mtc.P0, attrs={"units": "Pa", "standards_name": "referenece_pressure"}
-        )
-    )
-
-    return TPq.set_coords("altitude").swap_dims({"levels": "altitude"})
-
-
-r_consrv = make_sounding_from_adiabat(P, T_orce, q_orce)
-g_consrv = make_sounding_from_adiabat(P, T_gate, q_gate)
-p_pseudo = make_sounding_from_adiabat(P, T_op02, q_op02, thx=mtf.theta_e_bolton)
-r_pseudo = make_sounding_from_adiabat(P, T_orce, q_orce, thx=mtf.theta_e_bolton)
-g_pseudo = make_sounding_from_adiabat(P, T_gate, q_gate, thx=mtf.theta_e_bolton)
-r_wthice = make_sounding_from_adiabat(P, T_orce, q_orce, integrate=True)
-g_wthice = make_sounding_from_adiabat(P, T_gate, q_gate, integrate=True)
-
-r_consrv
 # %%
 # - plot profiles
 #
