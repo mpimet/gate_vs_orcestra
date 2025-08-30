@@ -1,7 +1,6 @@
 # %%
 # plot sst and air temperatures from ships
 
-from gettext import install
 import glob
 import xarray as xr
 import utilities.preprocessing as pre
