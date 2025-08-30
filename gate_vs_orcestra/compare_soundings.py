@@ -281,8 +281,10 @@ r_consrv
 # %%
 # - plot profiles
 #
-sns.set_context(context="talk")
-fig, ax = plt.subplots(1, 3, figsize=(10, 5), sharey=True)
+cw = 190/25.4
+
+sns.set_context(context="paper")
+fig, ax = plt.subplots(1, 3, figsize=(cw, cw/2), sharey=True)
 
 ylim = (0, 21500)
 rlim = (0, 1)
@@ -303,7 +305,7 @@ bs_bar.sel(altitude=slice(None, 12000)).rh.plot(c=colors["beach"], ls="-", **kwa
 gs_bar.rh.plot(c=colors["gate"], ls="-", **kwargs)
 
 ax[1].plot(
-    [halo_rh.quantile(0.34), halo_rh.quantile(0.65)],
+    [halo_rh.quantile(0.35), halo_rh.quantile(0.65)],
     [zbar, zbar],
     lw=2.5,
     c="k",
@@ -363,7 +365,7 @@ for x in ["rapsodi", "gate"]:
     ax[0].axhline(cp_ticks[x], lw=0.75, ls=":", c=colors[x])
     ax[1].hlines(zp_ticks[x], xmin=0.8, xmax=1.0, lw=0.75, ls=":", color=colors[x])
 
-ax[0].legend(fontsize=10)
+ax[0].legend(fontsize=9)
 fig.tight_layout()
 sns.despine(offset=0)
 sns.despine(ax=ax[0], offset=4)
@@ -386,7 +388,7 @@ dtheta_rs = rs_bar.theta - gs_bar.theta
 dtheta_bs = bs_bar.theta - gs_bar.theta
 
 sns.set_context("paper")
-fig, ax = plt.subplots(1, 1, figsize=(3, 4), sharey=True)
+fig, ax = plt.subplots(1, 1, figsize=(cw/2, cw/2 * 1.333), sharey=True)
 
 dtheta_rs.plot(ax=ax, y="altitude", ylim=ylim, label="rapsodi", color=colors["rapsodi"])
 dtheta_bs.plot(ax=ax, y="altitude", ylim=ylim, label="beach", color=colors["beach"])
