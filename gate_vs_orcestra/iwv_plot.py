@@ -1,5 +1,4 @@
 # %%
-
 import matplotlib.pyplot as plt
 import seaborn as sns
 import xarray as xr
@@ -9,7 +8,7 @@ import moist_thermodynamics.constants as mtc
 
 import utilities.data_utils as data
 import utilities.preprocessing as pp
-import gate_vs_orcestra.utilities.thermo as thermo
+import utilities.thermo as thermo
 from utilities.settings_and_colors import colors
 
 # %%
@@ -57,6 +56,7 @@ def calc_iwv(ds):
 # %%
 for name, ds in datasets.items():
     datasets[name] = calc_iwv(ds)
+
 # %%
 P = np.arange(100900.0, 4000.0, -500)
 
