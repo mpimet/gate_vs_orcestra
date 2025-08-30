@@ -1,0 +1,13 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "year",
+        "latitude",
+        "longitude"
+    ],
+    "long_name": "Grid Cell Weight",
+    "missing_value": NaN,
+    "standard_name": "areal_weight",
+    "units": "none",
+    "valid_max": 0.011453332526558398,
+    "valid_min": 0.011453332526558398
+}

@@ -1,0 +1,9 @@
+{
+    "Conventions": "Berkeley Earth Internal Convention (based on CF-1.5)",
+    "comment": "This file contains surface temperature anomaly field gridded on a 1\u00b0 (longitude) by 1\u00b0 (latitude) grid-box basis.",
+    "file_creation": "18-Jun-2025 01:56:52",
+    "institution": "Berkeley Earth",
+    "land_source_analysis_date": "04-Jun-2025 10:59:56",
+    "ocean_source_analysis_date": "10-Mar-2025 07:28:28",
+    "title": "Berkeley Earth Surface Temperature Anomaly Field"
+}

@@ -1,0 +1,13 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "year",
+        "latitude",
+        "longitude"
+    ],
+    "long_name": "Land Mask",
+    "missing_value": NaN,
+    "standard_name": "land_mask",
+    "units": "none",
+    "valid_max": 1.0000001192092896,
+    "valid_min": 0.0
+}
