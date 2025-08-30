@@ -13,6 +13,7 @@ from moist_thermodynamics import saturation_vapor_pressures as svp
 from moist_thermodynamics import functions as mtf
 from moist_thermodynamics import constants as mtc
 from moist_thermodynamics import utilities as mtu
+import utilities.thermo as thermo
 
 import seaborn as sns
 
@@ -189,6 +190,14 @@ for key, ds in datasets.items():
 # - create theoretical soundings
 #
 P = np.arange(100900.0, 4000.0, -500)
+
+r_consrv = thermo.make_sounding_from_adiabat(P, T_orce, q_orce)
+g_consrv = thermo.make_sounding_from_adiabat(P, T_gate, q_gate)
+p_pseudo = thermo.make_sounding_from_adiabat(P, T_op02, q_op02, thx=mtf.theta_e_bolton)
+r_pseudo = thermo.make_sounding_from_adiabat(P, T_orce, q_orce, thx=mtf.theta_e_bolton)
+g_pseudo = thermo.make_sounding_from_adiabat(P, T_gate, q_gate, thx=mtf.theta_e_bolton)
+r_wthice = thermo.make_sounding_from_adiabat(P, T_orce, q_orce, integrate=True)
+g_wthice = thermo.make_sounding_from_adiabat(P, T_gate, q_gate, integrate=True)
 
 
 def make_sounding_from_adiabat(

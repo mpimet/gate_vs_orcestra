@@ -10,7 +10,7 @@ from moist_thermodynamics import saturation_vapor_pressures as svp
 
 import utilities.data_utils as data
 import utilities.preprocessing as pp
-import utilities.mt_beta as mt_beta
+import gate_vs_orcestra.utilities.thermo as thermo
 from utilities.settings_and_colors import colors
 
 # %%
@@ -59,23 +59,17 @@ def calc_iwv(ds):
 for name, ds in datasets.items():
     datasets[name] = calc_iwv(ds)
 # %%
-
-
-# %%
-
-
 P = np.arange(100900.0, 4000.0, -500)
 
 orc_sfc = datasets["orcestra"].sel(altitude=0).mean("sonde")
 gate_sfc = datasets["gate"].sel(altitude=0).mean("sonde")
-orc_pseudo = mt_beta.mk_sounding_ds(
+
+orc_pseudo = thermo.make_sounding_from_adiabat(
     P, orc_sfc.ta.values, orc_sfc.q.values, thx=mtf.theta_e_bolton
 ).rename({"T": "ta", "P": "p"})
-
-gate_pseudo = mt_beta.mk_sounding_ds(
+gate_pseudo = thermo.make_sounding_from_adiabat(
     P, gate_sfc.ta.values, gate_sfc.q.values, thx=mtf.theta_e_bolton
 ).rename({"T": "ta", "P": "p"})
-
 # %%
 rh_orc = (
     datasets["orcestra"]
@@ -99,10 +93,10 @@ q_orc = mtf.relative_humidity_to_specific_humidity(
 orc_pseudo = calc_iwv(orc_pseudo.assign(q=("altitude", q_orc.values)))
 
 # %%
-cw = 190/25.4
+cw = 190 / 25.4
 sns.set_context("paper")
-#plt.style.use("utilities/gate.mplstyle")
-fig, ax = plt.subplots(figsize=(cw/2, cw/2 * 0.75))
+# plt.style.use("utilities/gate.mplstyle")
+fig, ax = plt.subplots(figsize=(cw / 2, cw / 2 * 0.75))
 for name in ["rapsodi", "beach", "gate"]:
     sns.histplot(
         data=datasets[name].iwv,
