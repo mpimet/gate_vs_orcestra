@@ -281,10 +281,10 @@ r_consrv
 # %%
 # - plot profiles
 #
-cw = 190/25.4
+cw = 190 / 25.4
 
 sns.set_context(context="paper")
-fig, ax = plt.subplots(1, 3, figsize=(cw, cw/2), sharey=True)
+fig, ax = plt.subplots(1, 3, figsize=(cw, cw / 2), sharey=True)
 
 ylim = (0, 21500)
 rlim = (0, 1)
@@ -388,7 +388,7 @@ dtheta_rs = rs_bar.theta - gs_bar.theta
 dtheta_bs = bs_bar.theta - gs_bar.theta
 
 sns.set_context("paper")
-fig, ax = plt.subplots(1, 1, figsize=(cw/2, cw/2 * 1.333), sharey=True)
+fig, ax = plt.subplots(1, 1, figsize=(cw / 2, cw / 2 * 1.333), sharey=True)
 
 dtheta_rs.plot(ax=ax, y="altitude", ylim=ylim, label="rapsodi", color=colors["rapsodi"])
 dtheta_bs.plot(ax=ax, y="altitude", ylim=ylim, label="beach", color=colors["beach"])
