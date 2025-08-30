@@ -6,7 +6,6 @@ import xarray as xr
 import numpy as np
 import moist_thermodynamics.functions as mtf
 import moist_thermodynamics.constants as mtc
-from moist_thermodynamics import saturation_vapor_pressures as svp
 
 import utilities.data_utils as data
 import utilities.preprocessing as pp
@@ -187,7 +186,7 @@ ax.annotate(
     fontsize=8,
     ha="center",
     va="bottom",
-    arrowprops=dict(arrowstyle=f"-[, widthB=2, lengthB=.1", lw=2.0),
+    arrowprops=dict(arrowstyle="-[, widthB=2, lengthB=.1", lw=2.0),
 )
 
 ax.annotate(
@@ -198,7 +197,7 @@ ax.annotate(
     ha="center",
     va="bottom",
     alpha=0.5,
-    arrowprops=dict(arrowstyle=f"-[, widthB=2, lengthB=.1", lw=2.0, color="gray"),
+    arrowprops=dict(arrowstyle="-[, widthB=2, lengthB=.1", lw=2.0, color="gray"),
 )
 
 ax.set_ylim(0, 0.218)
