@@ -125,7 +125,7 @@ def preprocess_sfc_temperatures(extent="orcestra_east"):
         .groupby("time.year")
         .mean()
     )
-    
+
     return temperatures
 
 

@@ -71,5 +71,5 @@ plt.show()
 
 # %%
 meteor3_tair = (meteor3.t_air_port + meteor3.t_air_board) / 2.0
-print (meteor3_tair.quantile(0.5).values)
+print(meteor3_tair.quantile(0.5).values)
 # %%
