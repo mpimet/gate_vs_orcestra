@@ -99,8 +99,10 @@ q_orc = mtf.relative_humidity_to_specific_humidity(
 orc_pseudo = calc_iwv(orc_pseudo.assign(q=("altitude", q_orc.values)))
 
 # %%
-plt.style.use("utilities/gate.mplstyle")
-fig, ax = plt.subplots(figsize=(6, 5.5))
+cw = 190/25.4
+sns.set_context("paper")
+#plt.style.use("utilities/gate.mplstyle")
+fig, ax = plt.subplots(figsize=(cw/2, cw/2 * 0.75))
 for name in ["rapsodi", "beach", "gate"]:
     sns.histplot(
         data=datasets[name].iwv,
@@ -124,6 +126,7 @@ ax.axvline(
 ax.text(
     x=datasets["orcestra"].iwv.median(),
     y=0.2,
+    fontsize=8,
     s="Orcestra",
     color="#6d88bc",
     ha="left",
@@ -141,33 +144,36 @@ ax.axvline(
 ax.text(
     x=datasets["gate"].iwv.median(),
     y=0.2,
-    s="Gate",
+    fontsize=8,
+    s="GATE",
     color=colors["gate"],
     ha="right",
     va="top",
     rotation=90,
 )
 
-ax.axvline(orc_pseudo.iwv, ymax=0.9, color="k", linestyle="--")
-ax.text(
-    x=orc_pseudo.iwv + 0.3,
-    y=0.2,
-    s="pseudo ORC",
-    color="k",
-    ha="left",
-    va="top",
-    rotation=90,
-)
-ax.axvline(gate_pseudo.iwv, ymax=0.9, color="k", linestyle="--")
-ax.text(
-    x=gate_pseudo.iwv + 0.3,
-    y=0.2,
-    s="pseudo GATE",
-    color="k",
-    ha="left",
-    va="top",
-    rotation=90,
-)
+ax.axvline(orc_pseudo.iwv, ymax=0.9, color="#6d88bc", linestyle="--")
+# ax.text(
+#     x=orc_pseudo.iwv + 0.3,
+#     y=0.2,
+#     fontsize=8,
+#     s="pseudo",
+#     color="#6d88bc",
+#     ha="left",
+#     va="top",
+#     rotation=90,
+# )
+ax.axvline(gate_pseudo.iwv, ymax=0.9, color=colors["gate"], linestyle="--")
+# ax.text(
+#     x=gate_pseudo.iwv + 0.2,
+#     y=0.2,
+#     fontsize=8,
+#     s="pseudo",
+#     color=colors["gate"],
+#     ha="left",
+#     va="top",
+#     rotation=90,
+# )
 
 print("orcestra pseudo", orc_pseudo.iwv.values)
 print("gate pseudo", gate_pseudo.iwv.values)
@@ -184,7 +190,7 @@ ax.annotate(
     "{:.2f}".format(diff_pseudo),
     xy=(mean_pseudo, 0.205),
     xytext=(mean_pseudo, 0.21),
-    fontsize=14,
+    fontsize=8,
     ha="center",
     va="bottom",
     arrowprops=dict(arrowstyle=f"-[, widthB=2, lengthB=.1", lw=2.0),
@@ -193,8 +199,8 @@ ax.annotate(
 ax.annotate(
     "{:.2f}".format(diff_campaigns),
     xy=(mean_campaigns, 0.21),
-    xytext=(mean_campaigns, 0.212),
-    fontsize=14,
+    xytext=(mean_campaigns, 0.215),
+    fontsize=8,
     ha="center",
     va="bottom",
     alpha=0.5,
@@ -202,10 +208,10 @@ ax.annotate(
 )
 
 ax.set_ylim(0, 0.218)
-ax.legend()
+ax.legend(fontsize=8)
 ax.set_yticks(ticks=np.arange(0, 0.2, 0.025))
 ax.spines["left"].set_bounds(-0.0, 0.19)
 sns.despine(offset={"left": 5})
 ax.set_xlabel("IWV / kg m$^{-2}$")
-fig.savefig("images/iwv_histograms.pdf", bbox_inches="tight")
+fig.savefig("plots/iwv_histograms.pdf", bbox_inches="tight")
 # %%
