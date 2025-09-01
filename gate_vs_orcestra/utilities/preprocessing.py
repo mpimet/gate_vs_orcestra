@@ -130,10 +130,18 @@ def preprocess_sfc_temperatures(extent="orcestra_east"):
 
 
 def get_tsrf_berkeley(
-    fname="../data/best.zarr",
+    fname="../data/best",
     src="/work/mh0066/m301046/Data/BEST/Global_TAVG_Gridded_1deg.nc",
+    extent="gate_ab",
 ):
+    if extent == "orcestra_east":
+        lat_slice = slice(3.5, 13.5)
+        lon_slice = slice(-34, -20)
+    elif extent == "gate_ab":
+        lat_slice = slice(5, 12)
+        lon_slice = slice(-27, -20)
     T0 = 273.15
+    fname = fname + f"_{extent}" + ".zarr"
     if not os.path.exists(fname):
         best = xr.open_dataset(src)
 
@@ -150,9 +158,7 @@ def get_tsrf_berkeley(
                 year=(("time"), years.values),
             )
 
-        best_data = get_useful_times(best).sel(
-            latitude=slice(5, 12), longitude=slice(-27, -20)
-        )
+        best_data = get_useful_times(best).sel(latitude=lat_slice, longitude=lon_slice)
 
         tsrf_anal = (
             (
