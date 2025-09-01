@@ -133,6 +133,7 @@ def get_tsrf_berkeley(
     fname="../data/best.zarr",
     src="/work/mh0066/m301046/Data/BEST/Global_TAVG_Gridded_1deg.nc",
 ):
+    T0 = 273.15
     if not os.path.exists(fname):
         best = xr.open_dataset(src)
 
@@ -144,20 +145,33 @@ def get_tsrf_berkeley(
                 time=[
                     np.datetime64(f"{year}-{month:02d}-01")
                     for year, month in zip(years.values, months.values)
-                ]
+                ],
+                months=(("time"), months.values),
+                year=(("time"), years.values),
             )
 
         best_data = get_useful_times(best).sel(
             latitude=slice(5, 12), longitude=slice(-27, -20)
         )
 
-        (
-            best_data.sel(time=best_data.time.dt.month.isin([8, 9]))
+        tsrf_anal = (
+            (
+                best_data.temperature.sel(time=best_data.time.dt.month.isin([8, 9]))
+                + np.concatenate(
+                    [best_data.climatology.sel(month_number=slice(7, 9))]
+                    * int(350 / 2),
+                    axis=0,
+                )
+                + T0
+            )
             .groupby("time.year")
             .mean()
-        ).to_zarr(fname)
+            .sel(year=slice(1974, None))
+            * best_data.areal_weight
+        ).sum(["latitude", "longitude"]) / best_data.areal_weight.sum()
+        tsrf_anal.rename("temperature").to_zarr(fname)
 
-    return xr.open_dataset(fname, engine="zarr")
+    return xr.open_dataset(fname, engine="zarr").temperature
 
 
 def get_pirata():

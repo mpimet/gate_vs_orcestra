@@ -10,26 +10,17 @@ import utilities.preprocessing as pp
 
 # %%
 # - Loading and reformatting the data
-T0 = 273.15
 
-berkeley = pp.get_tsrf_berkeley(
-    src="/Users/m219063/work/data/orcestra/BEST/Global_TAVG_Gridded_1deg.nc"
-)
-tsrf_anal = (
-    (
-        berkeley.temperature
-        + berkeley.climatology.sel(year=slice(1961, 1990)).mean()
-        + T0
-    )
-    .mean(["latitude", "longitude"])
-    .sel(year=slice(1974, None))
+tsrf_anal = pp.get_tsrf_berkeley(
+    src="/work/mh0066/m301046/Data/BEST/Global_TAVG_Gridded_1deg.nc"
 )
 
+# %%
 pirata = pp.get_pirata()
 
 # %%
 # - Paper Figure
-
+T0 = 273.15
 residuals_dict = {}
 
 cw = 190 / 25.4  # A4 Column width with 1cm margins
