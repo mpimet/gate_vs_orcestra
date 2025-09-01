@@ -131,7 +131,7 @@ def preprocess_sfc_temperatures(extent="orcestra_east"):
 
 def get_tsrf_berkeley(
     fname="../data/best",
-    src="/work/mh0066/m301046/Data/BEST/Global_TAVG_Gridded_1deg.nc",
+    src="",
     extent="gate_ab",
 ):
     if extent == "orcestra_east":
@@ -142,7 +142,7 @@ def get_tsrf_berkeley(
         lon_slice = slice(-27, -20)
     T0 = 273.15
     fname = fname + f"_{extent}" + ".zarr"
-    if not os.path.exists(fname):
+    if os.path.exists(src):
         best = xr.open_dataset(src)
 
         def get_useful_times(ds):
@@ -175,7 +175,7 @@ def get_tsrf_berkeley(
             .sel(year=slice(1974, None))
             * best_data.areal_weight
         ).sum(["latitude", "longitude"]) / best_data.areal_weight.sum()
-        tsrf_anal.rename("temperature").to_zarr(fname)
+        tsrf_anal.rename("temperature").to_zarr(fname, mode="w")
 
     return xr.open_dataset(fname, engine="zarr").temperature
 

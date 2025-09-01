@@ -11,9 +11,7 @@ import utilities.preprocessing as pp
 # %%
 # - Loading and reformatting the data
 
-tsrf_anal = pp.get_tsrf_berkeley(
-    src="/work/mh0066/m301046/Data/BEST/Global_TAVG_Gridded_1deg.nc"
-)
+tsrf_anal = pp.get_tsrf_berkeley(extent="gate_ab")
 
 # %%
 pirata = pp.get_pirata()
@@ -57,14 +55,14 @@ for sel_lat in [4, 12]:
     slope, intercept, r_value, _, _ = linregress(years, values)
     fit_line = slope * years + intercept
     r_squared = r_value**2
-
+    print(f"K/dec={slope * 10:.2f}, $R^2$={r_squared:.2f})")
     ax[0].scatter(
         years,
         values,
         s=20,
         marker="o",
         color=colors["pirata" + str(sel_lat)],
-        label=f"{sel_lat}°N (K/dec={slope * 10:.2f}, $R^2$={r_squared:.2f})",
+        label=f"PIRATA {sel_lat}°N",  # (K/dec={slope * 10:.2f}, $R^2$={r_squared:.2f})",
     )
 
     residuals_dict[sel_lat] = values - fit_line
@@ -75,12 +73,9 @@ slope, intercept, r_value, _, _ = linregress(
     tsrf_anal.year.sel(year=year_slice).values,
     tsrf_anal.sel(year=year_slice).values,
 )
+print(f"K/dec={slope * 10:.2f}, $R^2$={r_squared:.2f})")
 tsrf_anal.plot(
-    ax=ax[0],
-    marker="x",
-    linestyle="",
-    color=colors["merra2"],
-    label=f"Berkeley:(K/dec={slope * 10:.2f}, $R^2$={r_squared:.2f})",
+    ax=ax[0], marker="x", linestyle="", color=colors["merra2"], label="Berkeley"
 )
 ax[0].plot(
     tsrf_anal.year.sel(year=year_slice).values,
@@ -136,7 +131,7 @@ ax[0].set_ylabel(r"$T_{3\,\mathrm{m}}$ / K")
 ax[0].tick_params(axis="x", rotation=0)
 ax[0].plot([1973.8, 1974.1], [meteor2[2], meteor2[2]], lw=3, c="w")
 ax[0].plot([2023.9, 2024.1], [meteor3[2], meteor3[2]], lw=3, c="w")
-ax[0].legend(fontsize=8)
+ax[0].legend(fontsize=8, ncol=1)
 
 sn.despine(offset=10, ax=ax[0])
 
