@@ -5,17 +5,9 @@
 # subdirectory contains a further subdirectory
 # with the first 6 digits of the md5sum of the
 # format string.
-#
-# The assumptions is that files in directories
-# with identical 6-digit-md5sums can be processed
-# with the same Fortran programm. 
-#
-# Takes original directory as input argument
-#
-# ./GATEsort.sh <inputdir>
-#
-outfile="summary.txt"
-#
+
+dryrun=false
+
 # helper functions
 # ----------------
 
@@ -50,10 +42,8 @@ erase_blanks (){
 
 # ----------------
 
-# for infile in $1/*
-for infile in $(ls $1/* | awk -F\- '{print $NF,$0}' | sort -t- -k1 -n | awk '{print $2}')
+for infile in $1/*
 do
-    echo testing ${infile}
     if test -f ${infile}; then
         echo ${infile}
         n=0
@@ -91,7 +81,7 @@ do
 
                     ship=$(simplify_string "${line:15:24}")
 
-                    while (( n < 10 ))
+                    while (( n < 9 ))
 		    do
 			read line
 			n=$((n+1))
@@ -102,17 +92,17 @@ do
 			fi
 		    done
 	    
-		    echo "${TYPE}" "${PLATFORM}" on ${ship} >> "$outfile"
+		    echo "${PLATFORM}" on ${ship}
 
 		    format_string="${format1}${format2}"
-                    md5_format_string=`echo ${format_string} | md5sum | tr -d "-"`
+                    md5_format_string=`echo ${format_string} | md5sum |tr -d "-"`
 
 		    this_dir=RADIOSONDE/"${ship}"/"${md5_format_string:0:6}"
 		    [[ ! -d "${this_dir}" ]] && mkdir -p "${this_dir}"
 
-                    echo Format $format_string ${md5_format_string:0:6}
-
-                    cp ${infile} "${this_dir}"/.
+                    if [ "$dryrun" != "true" ]; then
+                       cp ${infile} "${this_dir}"/.
+                    fi
 
                     break
 
@@ -133,35 +123,28 @@ do
                     interval=${line:16:7} # omits last two digits ".0"
                     format_type=${line:25:1}
 
-                    if [[ "${interval}" == *".00"* ]]; then
-                        num_interval=0
-                    elif [[ "${interval}" == *".30"* ]]; then
-                        echo "undefined interval " ${interval}
-                        num_interval=999
-                    fi
+                    while (( n < 10 ))
+                    do
+                      read line
+                      n=$((n+1))
+                      case "${line:79:1}" in
+                        7) format1=$(simplify_string "${line:1:76}") ;;
+                        8) format2=$(simplify_string "${line:1:76}") ;;
+                        9) format3=$(simplify_string "${line:1:76}") ;;
+                      esac
+                    done
 
-                    while (( n < 11 ))
-		    do
-			read line
-			n=$((n+1))
-			if ((  "${line:79:1}" == "8" )) ; then
-			    format1=$(simplify_string "${line:1:76}")
-			elif (( "${line:79:1}" == "9" )) ; then
-			    format2=$(simplify_string "${line:1:76}")
-			elif ((  "${line:78:2}" == "10" )) ; then
-			    format3=$(simplify_string "${line:1:76}")
-			fi
-		    done
-                    # echo ${format_string}
 		    format_string="${format1}${format2}${format3}"
 		    md5_format_string=`echo ${format_string} | md5sum |tr -d "-"`
 
-                    echo ship data from ${PLATFORM} with interval ${num_interval} ${format_type}
+                    echo ship data from ${PLATFORM} with interval ${interval} ${format_type}
 
 		    this_dir=DSHIP/"${ship}"/"${md5_format_string:0:6}"
 		    [[ ! -d "${this_dir}" ]] && mkdir -p "${this_dir}"
 
-                    cp ${infile} "${this_dir}"/.
+                    if [ "$dryrun" != "true" ]; then
+                      cp ${infile} "${this_dir}"/.
+                    fi 
 
                     break
 
@@ -172,9 +155,6 @@ do
             if (( $n==25 )) ; then break; fi
 
         done < ${infile}
-
-    else
-        echo ${infile} not found!
 
     fi # infile
 
