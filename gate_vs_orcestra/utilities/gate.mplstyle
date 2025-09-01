@@ -1,10 +1,10 @@
-axes.titlesize : 18
-axes.labelsize : 16
+axes.titlesize : 14
+axes.labelsize : 14
 axes.linewidth : 1.5
 lines.linewidth : 3
 lines.markersize : 5
-xtick.labelsize : 14
-ytick.labelsize : 14
+xtick.labelsize : 13
+ytick.labelsize : 13
 xtick.major.width : 1.5
 ytick.major.width : 1.5
 axes.spines.right : False

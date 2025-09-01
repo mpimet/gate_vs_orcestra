@@ -8,6 +8,7 @@ from moist_thermodynamics import saturation_vapor_pressures as svp
 import utilities.data_utils as data
 import utilities.preprocessing as pp
 import utilities.modify_ds as md
+from utilities.settings_and_colors import colors  # noqa
 
 # %%
 cids = data.get_cids()
@@ -19,7 +20,7 @@ datasets = {
 
 for name, ds in datasets.items():
     datasets[name] = (
-        ds.pipe(pp.interpolate_gaps).pipe(pp.extrapolate_sfc).pipe(pp.sel_gate_A)
+        ds.pipe(pp.interpolate_gaps).pipe(pp.extrapolate_sfc).pipe(pp.sel_percusion_E)
     )
 # %%
 datasets["rs"] = datasets["rs"].where(datasets["rs"].ascent_flag == 0, drop=True)
@@ -58,8 +59,6 @@ for name, ds in datasets.items():
         var_binrange=(0, 1.1),
         ta_binrange=(220, 305),
     )
-# %%
-
 
 # %%
 
@@ -86,14 +85,15 @@ rh = 0.95
 
 p = 100000
 T = 300
-q = mt.relative_humidity_to_specific_humidity(
+q_low = mt.relative_humidity_to_specific_humidity(
     rh,
     p=p,
     T=T,
     es=es_liq,
 )
+print("low q", q_low)
 fix_q_rh_low = mt.specific_humidity_to_relative_humidity(
-    q,
+    q_low,
     p=ta_datasets["orcestra"]
     .p.mean(dim="sonde")
     .interpolate_na(dim="ta", fill_value="extrapolate", method="linear"),
@@ -104,33 +104,42 @@ fix_q_rh_low = mt.specific_humidity_to_relative_humidity(
 T = 230
 p = 23000
 rh = 0.4
-q = mt.relative_humidity_to_specific_humidity(
+q_high = mt.relative_humidity_to_specific_humidity(
     rh,
     p=p,
     T=T,
     es=es_liq,
 )
+print("high q ", q_high)
 fix_q_rh_high = mt.specific_humidity_to_relative_humidity(
-    q,
+    q_high,
     p=ta_datasets["orcestra"].p.mean(dim="sonde"),
     T=ta_datasets["orcestra"].ta,
     es=es_mixed,
 )
 
 # %%
-plt.style.use("utilities/gate.mplstyle")
+cw = 190 / 25.4
+sns.set_context("paper")
 cs_threshold = 0.95
-fig, axes = plt.subplots(ncols=2, figsize=(10, 5))
+fig, axes = plt.subplots(ncols=2, figsize=(cw, cw / 2))
 for ax in axes:
     ta_datasets["orcestra"].mean("sonde").rolling(ta=5).mean().rh.plot(
-        label="ORCESTRA", y="ta", color="blue", ax=ax
+        label="ORCESTRA",
+        y="ta",
+        color="blue",
+        ax=ax,
     )
     ta_datasets["gate"].mean("sonde").rolling(ta=5).mean().rh.plot(
-        label="GATE", y="ta", color="red", ax=ax
+        label="GATE",
+        y="ta",
+        color="red",
+        ax=ax,
     )
+
 for idx, (name, cmap) in enumerate([("gate", "Reds"), ("orcestra", "Blues")]):
     (ta_2d_datasets[name] / ta_2d_datasets[name].sum("rh_bin")).plot(
-        vmax=0.05,
+        vmax=0.03,
         cmap=cmap,
         ax=axes[idx],
         y="ta_bin",
@@ -139,43 +148,70 @@ for idx, (name, cmap) in enumerate([("gate", "Reds"), ("orcestra", "Blues")]):
     )
 
 
+bbox_args = dict(boxstyle="round", fc="white", alpha=0.3)
 for ax in axes:
     ax.set_ylabel("")
     ax.invert_yaxis()
     ax.set_xlabel("Relative humidity")
-    ax.axhline(273.15, color="k", linestyle="--", linewidth=0.5)
+    ax.axhline(273.15, color="k", linestyle="--")
     ax.plot(
         ice_line.values,
         datasets["orcestra"].ta.mean("sonde"),
         color="black",
-        linewidth=1.5,
-        label=r"$\text{RH}_{{\text{ice}}}$ = 1.0",
+    )
+    ax.annotate(
+        r"RH$_{\text{ice}} = 1$",
+        xy=(1.1, 250),
+        xycoords="data",
+        ha="right",
+        va="top",
+        bbox=bbox_args,
     )
     ax.plot(
         fix_q_rh_low.values,
         ta_datasets["orcestra"].ta,
         color="black",
         linestyle="--",
-        linewidth=1.5,
-        label=r"fixed $q$ close to surface",
+    )
+    ax.annotate(
+        "q = {:.4f}".format(q_low),
+        xy=(1.1, 302),
+        xycoords="data",
+        ha="right",
+        va="top",
+        bbox=bbox_args,
     )
     ax.plot(
         fix_q_rh_high.values,
         ta_datasets["orcestra"].ta,
         color="black",
         linestyle=":",
-        linewidth=1.5,
-        label="fixed $q$ upper troposphere",
     )
-axes[0].legend()
+    ax.annotate(
+        "q = {:.5f}".format(q_high),
+        xy=(1.1, 220),
+        xycoords="data",
+        ha="right",
+        va="top",
+        bbox=bbox_args,
+    )
+axes[0].legend(loc=3)
 axes[0].set_ylabel("Temperature / K")
+axes[0].set_title("GATE")
+axes[1].set_title("ORCESTRA")
+
+
 fig.suptitle(
-    "RH histograms for GATE and ORCESTRA; GATE-A subdomain",
+    "RH in the ORCESTRA-East subdomain",
 )
+
 sns.despine(offset={"bottom": 10})
 fig.savefig(
     "images/rh_histograms.pdf",
+    bbox_inches="tight",
 )
+# %%
+
 # %%
 pltcolors = sns.color_palette("Paired", n_colors=8)
 cs_threshold = 0.98
