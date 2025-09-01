@@ -15,7 +15,7 @@ from utilities.settings_and_colors import colors
 # %%
 
 reanalysis_sfc = pp.preprocess_sfc_temperatures()
-
+reanalysis_sfc["BEST"] = pp.get_tsrf_berkeley()
 
 # %%
 detrended = {}
@@ -24,18 +24,15 @@ for name in ["ERA5", "MERRA2", "JRA3Q"]:
     ds = reanalysis_sfc[name]
     detrended[name] = signal.detrend(ds.mean("cell").sel(year=slice(1974, None)).values)
 
-detrended["BEST"] = signal.detrend(
-    reanalysis_sfc["BEST"]
-    .temperature.mean(dim=["latitude", "longitude"])
-    .sel(year=slice(1974, None))
-    .values
-)
+
+detrended["BEST"] = signal.detrend(reanalysis_sfc["BEST"].values)
 # %%
 std = np.nanstd(np.concatenate([vals for vals in detrended.values()]))
 
 # %%
-plt.style.use("utilities/gate.mplstyle")
-fig, ax = plt.subplots(figsize=(10, 5))
+cw = 190 / 25.4
+sns.set_context("paper")
+fig, ax = plt.subplots(figsize=(cw, cw / 2))
 
 for name, vals in detrended.items():
     ax.plot(

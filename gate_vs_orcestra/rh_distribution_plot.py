@@ -14,9 +14,6 @@ import utilities.preprocessing as pp
 import utilities.modify_ds as md
 
 # %%
-
-
-# %%
 cids = data.get_cids()
 datasets = {
     "rapsodi": data.open_radiosondes(cids["radiosondes"]),
@@ -101,9 +98,6 @@ for name, ds in datasets.items():
         ]
     )
 
-
-# %%
-
 # %%
 thres = 1
 distribution_t = [
@@ -118,10 +112,10 @@ labels = {
     "rh_ice": r"RH$_{\text{ice}}$",
     "rh_diff_cp": r"RH$_{\text{ice}}$",
 }
-plt.style.use("utilities/gate.mplstyle")
-fig, axes = plt.subplots(
-    ncols=len(distribution_t), figsize=((len(distribution_t)) * 5, 5)
-)
+
+cw = 190 / 25.4
+sns.set_context("paper")
+fig, axes = plt.subplots(ncols=len(distribution_t), figsize=(cw, cw / 3))
 for name in ["gate", "beach", "rapsodi"]:
     for i, (ta_var, rh_var, height) in enumerate(distribution_t):
         if np.any(
@@ -154,8 +148,8 @@ for name in ["gate", "beach", "rapsodi"]:
         )
 
 for ax in axes[1:]:
-    ax.legend(loc="upper right")
-axes[0].legend(loc="upper left")
+    ax.legend(loc="upper right", fontsize=9)
+axes[0].legend(loc="upper left", fontsize=9)
 for ax in axes:
     ax.set_xlabel("Relative Humidity")
     ax.set_xlim(0, 1.1)
