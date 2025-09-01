@@ -25,6 +25,36 @@ cw = 190 / 25.4  # A4 Column width with 1cm margins
 print(cw)
 fig, ax = plt.subplots(1, 2, figsize=(cw, cw / 2))
 
+offset = 300.26 - 301.25 + 0.2
+meteor2 = np.asarray([299.85, 300.05, 300.15, 300.35, 300.55]) + offset
+meteor3 = np.asarray([300.75, 300.95, 301.25, 301.35, 301.55]) + offset
+
+ax[0].plot(
+    [1974, 1974],
+    [meteor2[1], meteor2[3]],
+    lw=2.5,
+    c=colors["gate"],
+    label=f"Meteor {meteor2[2]:.2f} K",
+    zorder=2,
+)
+
+ax[0].plot([1974, 1974], [meteor2[0], meteor2[4]], lw=0.5, c=colors["gate"], zorder=2)
+
+ax[0].plot(
+    [2024, 2024],
+    [meteor3[1], meteor3[3]],
+    lw=2.5,
+    c=colors["orcestra"],
+    label=f"Meteor {meteor3[2]:.2f} K",
+    zorder=2,
+)
+
+ax[0].plot(
+    [2024, 2024], [meteor3[0], meteor3[4]], lw=0.5, c=colors["orcestra"], zorder=2
+)
+ax[0].plot([1973.8, 1974.1], [meteor2[2], meteor2[2]], lw=3, c="w", zorder=2)
+ax[0].plot([2023.9, 2024.1], [meteor3[2], meteor3[2]], lw=3, c="w", zorder=2)
+
 Tmax = {}
 Tmin = {}
 for sel_lat in [4, 12]:
@@ -83,6 +113,7 @@ ax[0].plot(
     linestyle="--",
     color=colors["merra2"],
     linewidth=1.5,
+    zorder=5,
 )
 
 year_slice = slice(2006, None)
@@ -96,31 +127,6 @@ slope, intercept, r_value, _, _ = linregress(tsrf_anal.year.values, tsrf_anal.va
 print("slope whole period", slope)
 rean_resid = tsrf_anal - (slope * tsrf_anal.year.values + intercept)
 
-
-offset = 300.26 - 301.25
-meteor2 = np.asarray([299.85, 300.05, 300.15, 300.35, 300.55]) + offset
-meteor3 = np.asarray([300.75, 300.95, 301.25, 301.35, 301.55]) + offset
-
-ax[0].plot(
-    [1974, 1974],
-    [meteor2[1], meteor2[3]],
-    lw=2.5,
-    c=colors["gate"],
-    label=f"Meteor {meteor2[2]:.2f} K",
-)
-
-ax[0].plot([1974, 1974], [meteor2[0], meteor2[4]], lw=0.5, c=colors["gate"])
-
-ax[0].plot(
-    [2024, 2024],
-    [meteor3[1], meteor3[3]],
-    lw=2.5,
-    c=colors["orcestra"],
-    label=f"Meteor {meteor3[2]:.2f} K",
-)
-
-ax[0].plot([2024, 2024], [meteor3[0], meteor3[4]], lw=0.5, c=colors["orcestra"])
-
 ax[0].set_xticks(np.arange(1974, 2025, 10))
 ax[0].spines["bottom"].set_bounds(1974, 2024)
 ax[0].spines["left"].set_bounds(Tmin[4], Tmax[12])
@@ -129,11 +135,9 @@ ax[0].xaxis.set_major_formatter(mticker.FormatStrFormatter("%d"))
 ax[0].set_xlabel("year")
 ax[0].set_ylabel(r"$T_{3\,\mathrm{m}}$ / K")
 ax[0].tick_params(axis="x", rotation=0)
-ax[0].plot([1973.8, 1974.1], [meteor2[2], meteor2[2]], lw=3, c="w")
-ax[0].plot([2023.9, 2024.1], [meteor3[2], meteor3[2]], lw=3, c="w")
 ax[0].legend(fontsize=8, ncol=1)
 
-sn.despine(offset=10, ax=ax[0])
+sn.despine(offset=0, ax=ax[0])
 
 # Residual histogram
 residuals_all = np.concatenate([residuals_dict[4], residuals_dict[12]])
