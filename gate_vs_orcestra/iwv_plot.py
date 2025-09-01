@@ -97,7 +97,6 @@ orc_pseudo = calc_iwv(orc_pseudo.assign(q=("altitude", q_orc.values)))
 # %%
 cw = 190 / 25.4
 sns.set_context("paper")
-# plt.style.use("utilities/gate.mplstyle")
 fig, ax = plt.subplots(figsize=(cw / 2, cw / 2 * 0.75))
 for name in ["rapsodi", "beach", "gate"]:
     sns.histplot(
