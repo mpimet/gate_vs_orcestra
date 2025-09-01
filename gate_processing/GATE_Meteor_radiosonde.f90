@@ -82,7 +82,6 @@ program GATEradiosonde
 
   open (unit=10, file=infile, status='old', form='formatted', action='read')
   read( 10, '(A80)', iostat=ierror ) line(1:80)
-  read( 10, '(A80)', iostat=ierror ) line(1:80)
 
   select case (line(1:1))
 
@@ -101,10 +100,11 @@ program GATEradiosonde
      close (unit=10)
 
   case ( "1" )
+     read( 10, '(A)', iostat=ierror ) line(1:80)
      close (unit=10)
-     if ( line(30:39) /= "RADIOSONDE" ) then
+     if ( VERIFY("RADIOSONDE",line(16:39)) /= 0 ) then
        write ( * , * )
-       write ( * , * ) trim(infile), ' does not contain radiosonde data but ', line(30:39)
+       write ( * , * ) trim(infile), ' does not contain radiosonde data',line(16:39)
        stop
      end if
 
@@ -267,7 +267,6 @@ subroutine convert_data (infile)
            else
               exit
            end if
-           write ( * , * ) level, radiosondedata(level)%altitude, radiosondedata(level)%SPECIFIC_HUMDTY
            level = level + 1
         end do
 
