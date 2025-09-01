@@ -1,6 +1,5 @@
-# module load gcc/11.2.0-gcc-11.2.0
-NETCDFF_ROOT=/sw/spack-levante/netcdf-fortran-4.5.3-l2ulgp
-NETCDF_ROOT=/sw/spack-levante/netcdf-c-4.8.1-qk24yp
+NETCDFF_ROOT=/opt/homebrew
+NETCDF_ROOT=/opt/homebrew
 
 NETCDF_INCLUDE=${NETCDFF_ROOT}/include
 NETCDF_LIB=${NETCDF_ROOT}/lib
@@ -10,7 +9,7 @@ FC=gfortran -cpp
 FFLAGS=-I${NETCDF_INCLUDE}
 
 LD=gfortran
-LDFLAGS=-Wl,-rpath=${NETCDF_ROOT}/lib -Wl,-rpath=${NETCDFF_ROOT}/lib -L${NETCDF_LIB} -lnetcdf -L${NETCDFF_LIB} -lnetcdff
+LDFLAGS=-L${NETCDF_LIB} -lnetcdf -L${NETCDFF_LIB} -lnetcdff
 
 SOURCES = GATE_Meteor_radiosonde.f90 GATE_other_radiosonde.f90 GATEdship_f61f70.f90 GATEdship_fdfbef.f90 GATEdship_1a7095.f90
 OBJECTS = $(SOURCES:.f90=.o)
