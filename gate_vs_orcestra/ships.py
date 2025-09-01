@@ -69,6 +69,31 @@ plt.legend()
 plt.show()
 
 # %%
-meteor3_tair = (meteor3.t_air_port + meteor3.t_air_board) / 2.0
-print(meteor3_tair.quantile(0.5).values)
+tristan_chord = {
+    "GATE": {"data": meteor2.sst, "color": "navy"},
+    "ORCESTRA": {"data": meteor3_sst, "color": "orangered"},
+}
+
+cw = 190 / 25.4  # A4 Column width with 1cm margins
+fig, ax = plt.subplots(1, 1, figsize=(cw / 2, cw / 2.5))
+
+for key, dx in tristan_chord.items():
+    if dx["data"].mean() < 200:
+        dx["data"] = dx["data"] + 273.15
+    label = f"{key}"  # ({dx['data'].quantile(0.5).values:.2f}K)"
+    dx["data"].plot.hist(
+        ax=ax, bins=20, alpha=0.3333, density=True, color=dx["color"], label=label
+    )
+    print(
+        f"{key:20s}: [{dx['data'].quantile(0.1).values:.2f}, {dx['data'].quantile(0.25).values:.2f}, {dx['data'].quantile(0.5).values:.2f}, {dx['data'].quantile(0.75).values:.2f}, {dx['data'].quantile(0.9).values:.2f}]"
+    )
+
+ax.set_xticks([300.15, 301.25])
+ax.set_yticks([1, 2])
+ax.set_xlabel("Temperature / K")
+ax.set_ylabel("probability density")
+sns.despine(offset=10)
+plt.legend()
+plt.savefig("plots/tristan.pdf", bbox_inches="tight")
+plt.show()
 # %%
