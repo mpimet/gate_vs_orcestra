@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import xarray as xr
 from matplotlib.path import Path
@@ -115,6 +116,7 @@ def preprocess_sfc_temperatures(extent="orcestra_east"):
         .groupby("time.year")
         .mean()
     )
+
     temperatures["JRA3Q"] = (
         reanalysis["JRA3Q"]["mean2t"]
         .sel(time=reanalysis["JRA3Q"]["mean2t"].time.dt.month.isin([8, 9]))
@@ -124,26 +126,113 @@ def preprocess_sfc_temperatures(extent="orcestra_east"):
         .mean()
     )
 
-    best = xr.open_dataset("/work/mh0066/m301046/Data/BEST/Global_TAVG_Gridded_1deg.nc")
-
-    def get_useful_times(ds):
-        years = ds.time.astype(int)
-        months = np.ceil((best.time - best.time.astype(int)) * 12).astype(int)
-
-        return ds.assign(
-            time=[
-                np.datetime64(f"{year}-{month:02d}-01")
-                for year, month in zip(years.values, months.values)
-            ]
-        )
-
-    best_data = get_useful_times(best).sel(
-        latitude=slice(5, 12), longitude=slice(-27, -20)
-    )
-
-    temperatures["BEST"] = (
-        best_data.sel(time=best_data.time.dt.month.isin([8, 9]))
-        .groupby("time.year")
-        .mean()
-    )
     return temperatures
+
+
+def get_tsrf_berkeley(
+    fname="../data/best",
+    src="",
+    extent="gate_ab",
+):
+    if extent == "orcestra_east":
+        lat_slice = slice(3.5, 13.5)
+        lon_slice = slice(-34, -20)
+    elif extent == "gate_ab":
+        lat_slice = slice(5, 12)
+        lon_slice = slice(-27, -20)
+    T0 = 273.15
+    fname = fname + f"_{extent}" + ".zarr"
+    if os.path.exists(src):
+        best = xr.open_dataset(src)
+
+        def get_useful_times(ds):
+            years = ds.time.astype(int)
+            months = np.ceil((best.time - best.time.astype(int)) * 12).astype(int)
+
+            return ds.assign(
+                time=[
+                    np.datetime64(f"{year}-{month:02d}-01")
+                    for year, month in zip(years.values, months.values)
+                ],
+                months=(("time"), months.values),
+                year=(("time"), years.values),
+            )
+
+        best_data = get_useful_times(best).sel(latitude=lat_slice, longitude=lon_slice)
+
+        tsrf_anal = (
+            (
+                best_data.temperature.sel(time=best_data.time.dt.month.isin([8, 9]))
+                + np.concatenate(
+                    [best_data.climatology.sel(month_number=slice(7, 9))]
+                    * int(350 / 2),
+                    axis=0,
+                )
+                + T0
+            )
+            .groupby("time.year")
+            .mean()
+            .sel(year=slice(1974, None))
+            * best_data.areal_weight
+        ).sum(["latitude", "longitude"]) / best_data.areal_weight.sum()
+        tsrf_anal.rename("temperature").to_zarr(fname, mode="w")
+
+    return xr.open_dataset(fname, engine="zarr").temperature
+
+
+def get_pirata():
+    path = "../data/"
+    lon_west = 23
+    lats_north = ["4", "12"]
+    temp_res = "dy"
+
+    var_help = {
+        "AT": {"key": "t_air", "depth": -3.0},
+    }
+
+    vars = list(var_help.keys())
+
+    for varname in vars:
+        q_varname = f"Q{varname}"
+        var_help[q_varname] = {
+            "key": f"q_{var_help[varname]['key']}",
+            "depth": var_help[varname]["depth"],
+        }
+        s_varname = f"S{varname}"
+        var_help[s_varname] = {
+            "key": f"s_{var_help[varname]['key']}",
+            "depth": var_help[varname]["depth"],
+        }
+
+    ds_all = {}
+
+    for lat_north in lats_north:
+        filename = f"{path}*{lat_north}n{lon_west}w_{temp_res}.cdf"
+        print(filename)
+        ds = xr.open_mfdataset(filename)
+        ds_all[lat_north] = ds
+
+    pirata = xr.combine_by_coords(
+        [ds_all[lat_north] for lat_north in lats_north],
+        compat="broadcast_equals",
+        combine_attrs="drop_conflicts",
+    )
+
+    for var in pirata.data_vars:
+        var_new = var.split("_")[0]
+        pirata = pirata.rename({var: var_new})
+
+        if var_new in var_help:
+            selected_depth = var_help[var_new]["depth"]
+            pirata[var_new] = pirata[var_new].sel(depth=selected_depth)
+            pirata[var_new].attrs["sel_depth_m"] = float(selected_depth)
+            pirata = pirata.rename({var_new: var_help[var_new]["key"]})
+
+        else:
+            print(f"Need to add {var_new} to var_help.")
+
+    if "depth" in pirata.coords:
+        pirata = pirata.drop_vars("depth")
+
+    pirata = pirata.compute()
+    return pirata.where(pirata.q_t_air.isin([1, 2]), drop=True)
