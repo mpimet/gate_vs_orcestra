@@ -21,7 +21,7 @@
 
 For a content overview see GATE_tape_contents.pdf
 
-## Meteor sonde data from 
+## GATE_AND_COMM_SHIP, ship data and Meteor sonde data from 
 
 * 3.00.02.104-3.31.02.101_19740601-19740930
 
@@ -39,10 +39,21 @@ For a content overview see GATE_tape_contents.pdf
 
 * GATE_other_radiosonde.x
 * GATE_Meteor_radiosonde.x
+* GATEdship_1a7095.x (Meteor sst)
+* GATEdship_f61f70.x (GATE_AND_COMM_SHIPS sst)
+* GATEdship_fdfbef.x (ship data from Gilliss, Dallas, and Researcher)
 
 ## GATEsort.sh
 
   shell script to sort content of tape directories
+
+* GATE_AND_COOM_SHIPS and METEOR radiosonde data
+
+  GATEsort.sh /<path to >/DATA/GATE/3.00.02.104-3.31.02.101_19740601-19740930
+
+* all other radiosonde data
+
+  GATEsort.sh /<path to >/DATA/GATE/3.31.02.101-3.33.02.101_19740601-19740930
 
 ## positions.py
 
