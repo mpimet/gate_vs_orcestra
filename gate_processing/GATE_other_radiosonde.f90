@@ -114,10 +114,11 @@ program GATEradiosonde
      close (unit=10)
 
   case ( "1" )
+     read( 10, '(A)', iostat=ierror ) line(1:80)
      close (unit=10)
-     if ( line(15:24) /= "RADIOSONDE" ) then
+     if ( VERIFY("RADIOSONDE",line(16:39)) /= 0 ) then
        write ( * , * )
-       write ( * , * ) trim(infile), ' does not contain radiosonde data'
+       write ( * , * ) trim(infile), ' does not contain radiosonde data',line(16:39)
        stop
      end if
 
