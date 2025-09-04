@@ -203,7 +203,7 @@ h_p1 = mlines.Line2D(
     color=colors["pirata12"],
     marker="*",
     linestyle="None",
-    markersize=4,
+    markersize=5,
     alpha=1,
     label="PIRATA (-23ºE, 12ºN)",
 )
@@ -220,10 +220,12 @@ h_p2 = mlines.Line2D(
 )
 
 ax.legend(
-    bbox_to_anchor=(-0.15, 1.07),
+    bbox_to_anchor=(-0.15, 1.10),
+    title="GATE A/B           ORCESTRA East",
     ncol=2,
     loc="upper left",
-    handles=[h_g2, h_b2, h_r2, h_p2, h_g1, h_b1, h_r1, h_p1],
+    framealpha=1,
+    handles=[h_g2, h_b2, h_r2, h_p1, h_g1, h_b1, h_r1],
     fontsize=6,
 )
 
@@ -234,7 +236,7 @@ ax.set_xlabel("longitude / $^\\circ$W")
 ax.set_yticks(yticks)
 ax.set_ylabel("latitude / $^\\circ$N")
 
-for xlat in [4, 12]:
+for xlat in [12]:
     ax.scatter(
         [-23],
         [xlat],
@@ -243,7 +245,7 @@ for xlat in [4, 12]:
         facecolors=colors["pirata" + str(xlat)],
         linewidth=1.0,
         transform=ccrs.PlateCarree(),
-        marker="o",
+        marker="*",
     )
 
 ax.annotate(
@@ -265,7 +267,7 @@ ax.annotate(
 )
 
 ax.annotate("GATE A/B array", xy=(-20.3, 9.55), fontsize=8)
-ax.annotate("ORCESTRA East", xy=(-35.5, 12.5), fontsize=8)
+ax.annotate("ORCESTRA East", xy=(-35.5, 11.5), fontsize=8)
 plt.savefig("plots/gate-orcestra-sondes.pdf")
 
 # %%

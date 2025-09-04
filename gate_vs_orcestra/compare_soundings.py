@@ -17,8 +17,6 @@ import utilities.thermo as thermo
 import seaborn as sns
 
 es = svp.liq_wagner_pruss
-
-
 # %%
 # - get HALO data
 halo = (
@@ -39,11 +37,14 @@ halo = (
 hal = (
     halo.swap_dims({"TIME": "altitude"})
     .sortby("altitude")
-    .sel(altitude=slice(14300, None))
+    .sel(altitude=slice(14000, None))
 )
 halo_rh = halo.RELHUM.where(halo.RELHUM < 70, drop=True) / 100.0
+halo_tk = halo.TS.where(halo.RELHUM < 70, drop=True)
 x = hal.swap_dims({"altitude": "TIME"})
 zbar = x.altitude.mean().values
+# %%
+halo
 # %%
 # - load data
 #
@@ -85,7 +86,7 @@ for sset in ["gate", "rapsodi"]:
     P_sfc = xs.p.sel(altitude=slice(10, 50)).max(dim="altitude") + 100
     RH_sfc = xs.rh.sel(altitude=slice(0, 30)).max(dim="altitude")
     T_sfc = mtf.theta2T(
-        xs.theta.sel(altitude=slice(200, 600)).mean(dim="altitude"), P_sfc
+        xs.theta.sel(altitude=slice(None, 400)).mean(dim="altitude"), P_sfc
     )
     q_sfc = mtf.partial_pressure_to_specific_humidity(RH_sfc * es(T_sfc), P_sfc)
     sfc_vals[sset] = {
@@ -151,7 +152,6 @@ for key, ds in datasets.items():
 
     z_cp = dsx.ta.idxmin(dim="altitude")
     t_cp = dsx.ta.min(dim="altitude")
-    t_cp
     print(f"  {key}: n={np.sum(mask).values} sondes")
     print(
         f"   z at cold point: {z_cp.median().values:.2f} m ({(z_cp.quantile(0.9) - z_cp.quantile(0.1)).values / 2:.2f} m)"
@@ -165,13 +165,14 @@ for key, ds in datasets.items():
     )
 
     cp_ticks[key] = z_cp.median().values
-ax.set_xlabel("altitude / m")
+ax.set_xlabel("z / m")
 sns.despine(offset=10)
 
 Tx = rs_bar.ta
 RHice = svp.ice_wagner_etal(Tx) / svp.liq_wagner_pruss(Tx)
 # %%
 # - convective top
+#
 datasets = {"rapsodi": rs_bar, "beach": bs_bar, "gate": gs_bar}
 
 print("Height and temerature of convective top:")
@@ -202,23 +203,61 @@ g_wthice = thermo.make_sounding_from_adiabat(P, T_gate, q_gate, integrate=True)
 # - plot profiles
 #
 cw = 190 / 25.4
-
 sns.set_context(context="paper")
 fig, ax = plt.subplots(1, 3, figsize=(cw, cw / 2), sharey=True)
 
-ylim = (0, 21500)
+ylim = (0, 23000)
 rlim = (0, 1)
 dlim = (295, 375)
-
+#
+# temperature profiles and adiabats
 kwargs = {"ax": ax[0], "y": "altitude", "ylim": ylim, "xlim": (185, 200)}
-rs_bar.ta.plot(c=colors["rapsodi"], ls="-", label="rapsodi", **kwargs)
-bs_bar.ta.plot(c=colors["beach"], ls="-", label="beach", **kwargs)
-gs_bar.ta.plot(c=colors["gate"], ls="-", label="gate", **kwargs)
 
-r_pseudo["T"].plot(c="grey", ls="--", label="pseudo", **kwargs)
-r_consrv["T"].plot(c="grey", ls=":", label="moist", **kwargs)
-# r_wthice["T"].plot(c="grey", ls=":", label="ice", **kwargs)
+gs_bar.ta.plot(c=colors["gate"], ls="-", label="GATE-RS", **kwargs)
+rs_bar.ta.plot(c=colors["rapsodi"], ls="-", label="ORCESTRA-RS", **kwargs)
+bs_bar.ta.plot(c=colors["beach"], ls="-", label="ORCESTRA-DS", **kwargs)
 
+r_pseudo["T"].plot(c="grey", ls="--", **kwargs)
+r_consrv["T"].plot(c="grey", ls=":", **kwargs)
+
+ax[0].plot(
+    [halo_tk.quantile(0.35), halo_tk.quantile(0.65)],
+    [zbar, zbar],
+    lw=2.5,
+    c="k",
+    label="HALO",
+)
+
+ax[0].plot(
+    [halo_tk.quantile(0.1), halo_tk.quantile(0.9)],
+    [zbar, zbar],
+    lw=0.5,
+    c="k",
+)
+ax[0].plot(
+    [halo_tk.quantile(0.49), halo_tk.quantile(0.51)], [zbar, zbar], lw=2.5, c="w"
+)
+
+ax[0].annotate("adiabats", xy=(250, 10500), fontsize=8)
+
+ax[0].annotate(
+    "$z_\\mathrm{cp}$",
+    xy=(230, (cp_ticks["rapsodi"] + cp_ticks["gate"]) / 2),
+    fontsize=8,
+)
+
+ax[0].set_xlim(190, 305)
+ax[0].set_xlabel("$T$ / K")
+ax[0].set_ylabel("z / km")
+ax[0].set_xticks(
+    [np.round(rs_bar.ta.min().values, 1), 250, np.round(rs_bar.ta.max().values, 1)]
+)
+ax[0].set_yticks(np.arange(0, 22000, 3000))
+ax[0].set_yticklabels([0, 3, 6, 9, 12, 15, 18, 21])
+ax[0].legend(fontsize=8, loc="lower left")
+sns.despine(ax=ax[0], offset={"bottom": 0, "left": 10})
+#
+# rh profiles and ice-saturation
 kwargs = {"ax": ax[1], "y": "altitude", "ylim": ylim, "xlim": (0, 1)}
 rs_bar.rh.plot(c=colors["rapsodi"], ls="-", **kwargs)
 bs_bar.sel(altitude=slice(None, 12000)).rh.plot(c=colors["beach"], ls="-", **kwargs)
@@ -229,23 +268,55 @@ ax[1].plot(
     [zbar, zbar],
     lw=2.5,
     c="k",
-    label="HALO 35 to 65",
 )
+
 ax[1].plot(
     [halo_rh.quantile(0.1), halo_rh.quantile(0.9)],
     [zbar, zbar],
     lw=0.5,
     c="k",
-    label="HALO 0 to 90",
 )
 ax[1].plot(
     [halo_rh.quantile(0.49), halo_rh.quantile(0.51)], [zbar, zbar], lw=2.5, c="w"
 )
-ax[1].legend(fontsize=9)
 
-RHice.plot(c=colors["rapsodi"], ls="dotted", **kwargs, label="ice saturated")
-ax[1].legend(fontsize=9)
+ax[1].annotate("HALO", xy=(0.1, 13500), fontsize=8)
 
+ax[1].annotate(
+    "ice-saturation",
+    xy=(0.52, 18500),
+    color=colors["rapsodi"],
+    fontsize=8,
+)
+
+ax[1].annotate(
+    "$z_0$",
+    xy=(0.5, (zp_ticks["rapsodi"] + zp_ticks["gate"]) / 2),
+    fontsize=8,
+)
+
+RHice.plot(c=colors["rapsodi"], ls="dotted", **kwargs)
+
+ax[1].legend(fontsize=9)
+ax[1].set_xlabel("RH / 1")
+ax[1].set_ylabel("")
+ax[1].set_xticks(
+    [
+        np.round(
+            rs_bar.rh.sel(altitude=cp_ticks["rapsodi"], method="nearest").values, 2
+        ),
+        np.round(rs_bar.rh.sel(altitude=slice(9000, 12000)).mean().values, 2),
+        np.round(rs_bar.rh.sel(altitude=slice(None, 400)).min().values, 1),
+    ]
+)
+
+for x in ["rapsodi", "gate"]:
+    ax[0].axhline(cp_ticks[x], xmin=0.05, xmax=0.3, lw=1, ls=":", c=colors[x])
+    ax[1].hlines(zp_ticks[x], xmin=0.6, xmax=0.9, lw=1, ls=":", color=colors[x])
+
+sns.despine(ax=ax[1], offset=0)
+#
+# brunt-vaisala frequency profiles and adiabats
 kwargs = {"ax": ax[2], "y": "altitude", "ylim": ylim, "xlim": (0, 0.015)}
 mtf.brunt_vaisala_frequency(rs_bar.theta, rs_bar.q, rs_bar.altitude, axis=0).plot(
     c=colors["rapsodi"], ls="-", label="rapsodi", **kwargs
@@ -263,34 +334,24 @@ mtf.brunt_vaisala_frequency(
 mtf.brunt_vaisala_frequency(
     r_consrv["theta"], r_consrv["q"], r_consrv["altitude"]
 ).plot(c="grey", ls=":", label="moist", **kwargs)
-# mtf.brunt_vaisala_frequency(
-#    r_wthice["theta"], r_wthice["q"], r_consrv["altitude"]
-# ).plot(c="grey", ls=":", label="ice", **kwargs)
 
+
+nt1 = mtf.brunt_vaisala_frequency(rs_bar.theta, rs_bar.q, rs_bar.altitude, axis=0).sel(
+    altitude=slice(None, 5000)
+)
+nt2 = mtf.brunt_vaisala_frequency(rs_bar.theta, rs_bar.q, rs_bar.altitude, axis=0).sel(
+    altitude=slice(9000, None)
+)
+ax[2].set_xticks([np.round(nt2.min().values, 3), np.round(nt1.max().values, 3)])
+ax[2].set_xlim(0.005, 0.015)
 ax[2].set_xlabel("$N$ / s")
-ax[2].set_xticks([0, 0.01])
 ax[2].set_ylabel("")
 
-ax[0].set_xlabel("$T$ / K")
-ax[0].set_ylabel("altitude / km")
-# ax[0].set_xticks([300, 330, 360, 390])
-ax[0].set_xticks([200, 250, 300])
-ax[0].set_yticks(np.arange(0, 19000, 3000))
-ax[0].set_yticklabels([0, 3, 6, 9, 12, 15, 18])
+sns.despine(ax=ax[2], offset={"bottom": 0, "left": 10})
 
-ax[1].set_xlabel("RH")
-ax[1].set_ylabel("")
-
-for x in ["rapsodi", "gate"]:
-    ax[0].axhline(cp_ticks[x], lw=0.75, ls=":", c=colors[x])
-    ax[1].hlines(zp_ticks[x], xmin=0.8, xmax=1.0, lw=0.75, ls=":", color=colors[x])
-
-ax[0].legend(fontsize=9)
 fig.tight_layout()
-sns.despine(offset=0)
-sns.despine(ax=ax[0], offset=4)
-
 plt.savefig("plots/sounding.pdf")
+plt.show()
 # %%
 # -- plot differencex wrt GATE
 #
@@ -310,15 +371,18 @@ dtheta_bs = bs_bar.theta - gs_bar.theta
 sns.set_context("paper")
 fig, ax = plt.subplots(1, 1, figsize=(cw / 2, cw / 2 * 1.333), sharey=True)
 
-dtheta_rs.plot(ax=ax, y="altitude", ylim=ylim, label="rapsodi", color=colors["rapsodi"])
-dtheta_bs.plot(ax=ax, y="altitude", ylim=ylim, label="beach", color=colors["beach"])
+dtheta_rs.plot(
+    ax=ax, y="altitude", ylim=ylim, label="ORCESTRA-RS", color=colors["rapsodi"]
+)
+dtheta_bs.plot(
+    ax=ax, y="altitude", ylim=ylim, label="ORCESTRA-DS", color=colors["beach"]
+)
 
-x.plot(ax=ax, y="altitude", color="k", ls="dotted", label="theory", lw=1)
+x.plot(ax=ax, y="altitude", color="k", ls="dotted", lw=1)
 y.plot(ax=ax, y="altitude", color="k", ls="dotted", lw=1)
 
 ax.axvline(0, color="grey", lw=0.5, ls="--")
 ax.vlines(-2.18, ymin=20e3, ymax=23e3, color="grey", lw=0.5, ls="-")
-
 
 ax.plot(
     np.asarray([-1, 3.5]),
@@ -334,19 +398,21 @@ ax.annotate(
 )
 
 ax.set_xlabel("$\\Delta \\theta$ / K")
-ax.set_ylabel("altitude / m")
-ax.set_ylabel("altitude / km")
+ax.set_ylabel("z / m")
+ax.set_ylabel("z / km")
 
 dth_st = dtheta_rs.sel(altitude=slice(23000, 25000)).mean().values
 dth_bl = dtheta_rs.sel(altitude=slice(200, 600)).mean().values
-print(dth_bl)
+
+ax.annotate("adiabats", xy=(3, 16000), color="k", fontsize=8)
+ax.annotate("RCE", xy=(-2.8, 19200), color="k", fontsize=8)
 
 ax.set_xticks(
     [
-        np.round(dtheta_rs.min().values, 1),
-        np.round(dth_st, 1),
-        np.round(dth_bl, 1),
-        np.round(dtheta_rs.max().values, 1),
+        np.round(dtheta_rs.min().values, 2),
+        np.round(dth_st, 2),
+        np.round(dth_bl, 2),
+        np.round(dtheta_rs.max().values, 2),
     ]
 )
 ax.set_xticks([0], minor=True)
@@ -357,10 +423,11 @@ ax.set_yticks([z_T0_gate.quantile(0.5), z_T0.quantile(0.5)], minor=True)
 
 plt.legend(loc="lower left", fontsize=8)
 plt.tight_layout()
-sns.despine(offset=10)
+sns.despine(offset={"bottom": 0, "left": 5})
 plt.savefig("plots/DeltaT.pdf")
 # %%
-
+# - write diagnostics
+#
 rx = rs_bar.sel(altitude=slice(0, 12000)).set_coords("p").swap_dims({"altitude": "p"})
 gx = gs_bar.sel(altitude=slice(0, 12000)).set_coords("p").swap_dims({"altitude": "p"})
 bx = bs_bar.sel(altitude=slice(0, 12000)).set_coords("p").swap_dims({"altitude": "p"})
@@ -405,19 +472,17 @@ delta_rs.plot(ax=ax[0], y="altitude", ylim=ylim, label=label, c=colors[label])
 delta_rs = rs_GA_bar.u - rs_PE_bar.u
 delta_rs.plot(ax=ax[1], y="altitude", ylim=ylim, label=label, c=colors[label])
 
-
 ax[0].set_ylim(0, 14300)
 ax[0].set_xlim(-1, 1)
 ax[0].set_xlabel("$\\Delta \\theta$ / K")
-ax[0].set_ylabel("altitude / km")
-ax[1].set_ylabel(None)
-
+ax[0].set_ylabel("z / km")
 ax[0].set_xticks([delta_bar_bs, delta_bar_rs], minor=True)
-
 ax[0].set_yticks(np.arange(0, 12300, 3000))
 ax[0].set_yticklabels([0, 3, 6, 9, 12])
+ax[1].set_ylabel(None)
 
 plt.legend()
+
 sns.despine(offset=10)
 plt.savefig("plots/DeltaT2.pdf")
 print(f"differences: beach {delta_bar_bs:.2f}, rapsodi {delta_bar_rs:.2f}")
@@ -541,7 +606,6 @@ gs_bar.theta.plot(
 
 ax.set_xlabel("$\\theta$ / K")
 
-
 ax.legend(fontsize=10)
 fig.tight_layout()
 sns.despine(offset=10)
@@ -564,7 +628,7 @@ ax[0].axvline(x=0.0, ls=":", lw=1)
 ax[1].axvline(x=0.0, ls=":", lw=1)
 
 ax[0].set_xlabel("$u$ / ms$^{-1}$")
-ax[0].set_ylabel("altitude /k m")
+ax[0].set_ylabel("z / km")
 ax[1].set_xlabel("$v$ / ms$^{-1}$")
 ax[1].set_ylabel(None)
 ax[0].set_xlim(-23, 10)
@@ -586,6 +650,3 @@ ax[1].set_xlim(-3, 7)
 
 sns.despine(offset=10)
 plt.savefig("plots/zonal-wind.pdf")
-# %%
-bs_bar["ta"].min(dim="altitude").values
-# %%
