@@ -8,8 +8,8 @@ colors = {
     "jra3q": "#435D00",
     "merra2": "#6C9600",
     "era5": "#98D500",
-    "best": "#23670C",
-    "pirata12": "#95C602",
+    "best": "#00A9A0",
+    "pirata12": "#939494",
     "pirata4": "#D9F407",
 }
 
