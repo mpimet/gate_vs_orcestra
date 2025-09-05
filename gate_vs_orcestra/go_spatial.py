@@ -230,7 +230,7 @@ ax.legend(
 )
 
 xticks = [-34, -27.0, -23.5, -20]
-yticks = [3.5, 8.5, 13.5]
+yticks = [4.5, 8.5, 12.5]
 ax.set_xticks(xticks)
 ax.set_xlabel("longitude / $^\\circ$W")
 ax.set_yticks(yticks)
