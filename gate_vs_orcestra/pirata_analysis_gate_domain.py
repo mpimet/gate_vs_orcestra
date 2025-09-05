@@ -107,13 +107,13 @@ slope, intercept, r_value, _, _ = linregress(
 )
 print(f"K/dec={slope * 10:.2f}, $R^2$={r_squared:.2f})")
 tsrf_anal.plot(
-    ax=ax[0], marker=".", linestyle="", color=colors["merra2"], label="Berkeley"
+    ax=ax[0], marker=".", linestyle="", color=colors["best"], label="Berkeley"
 )
 ax[0].plot(
     tsrf_anal.year.sel(year=year_slice).values,
     slope * tsrf_anal.year.sel(year=year_slice).values + intercept,
     linestyle="--",
-    color=colors["merra2"],
+    color=colors["best"],
     linewidth=1.5,
     zorder=5,
 )
@@ -164,7 +164,7 @@ ax[1].hist(
     alpha=0.4,
     label="reanalysis",
     density=True,
-    color=colors["merra2"],
+    color=colors["best"],
 )
 ax[1].set_xlim(-0.82, 0.82)
 ax[1].set_xticks(
@@ -180,7 +180,7 @@ ax[1].set_xticks(
 ax[1].spines["bottom"].set_bounds(-0.75, 0.75)
 ax[1].set_yticks([0, 1, 2])
 ax[1].set_ylabel("probability density")
-ax[1].set_xlabel(r"residual $T_{3\,\mathrm{m}}$ / K")
+ax[1].set_xlabel(r"residual $T$ / K")
 sn.despine(ax=ax[1])
 
 plt.tight_layout()
