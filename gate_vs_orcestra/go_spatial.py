@@ -205,7 +205,7 @@ h_p1 = mlines.Line2D(
     linestyle="None",
     markersize=5,
     alpha=1,
-    label="PIRATA (-23ºE, 12ºN)",
+    label="PIRATA (-23˚E, 12˚N)",
 )
 
 h_p2 = mlines.Line2D(
@@ -216,7 +216,7 @@ h_p2 = mlines.Line2D(
     linestyle="None",
     markersize=4,
     alpha=1,
-    label="PIRATA (-23ºE, 4ºN)",
+    label="PIRATA (-23˚E, 4˚N)",
 )
 
 ax.legend(
