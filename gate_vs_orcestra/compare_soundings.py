@@ -297,7 +297,6 @@ ax[1].annotate(
 
 RHice.plot(c=colors["rapsodi"], ls="dotted", **kwargs)
 
-ax[1].legend(fontsize=9)
 ax[1].set_xlabel("RH / 1")
 ax[1].set_ylabel("")
 ax[1].set_xticks(
