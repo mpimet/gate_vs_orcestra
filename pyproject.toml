@@ -30,6 +30,7 @@ dependencies = [
     "scipy",
     "seaborn",
     "setuptools>=80.9.0",
+    "wheel",
     "xarray",
     "xhistogram",
     "zarr>2",
