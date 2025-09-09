@@ -29,3 +29,30 @@ export PKG_CONFIG_PATH="/opt/homebrew/opt/openblas/lib/pkgconfig"
 CC=gcc-14 uv run pip install git+https://github.com/igmk/pamtra
 ```
 Other gcc versions can also be used, however, they apparently have to be smaller than 15. 
+
+### Running konrad
+
+Konrad relies on the CliMT package, which unfortunately is no longer maintained.
+Consequently, installation with `uv` is not possible right away.
+However, the following workaround should install Konrad and CliMT to the virtual environment:
+
+```
+# Activate the `uv` environment directly#
+uv sync
+source .venv/bin/activate
+
+# Set environment variables for C anf Fortran compilers
+export CC=gcc-12
+export FC=gfortran-12
+
+# Set the target architecture (different for Apple M1 [arm64])
+[[ $(uname -p) == arm64 ]] && export TARGET=ARMV8 || export TARGET=HASWELL
+
+# Install a trimmed down version of CliMT that ships RRTMG only
+python3 -m pip install git+https://github.com/atmtools/climt@rrtmg-only
+
+# Install konrad itself
+python3 -m pip install konrad
+```
+
+It should then be possible to run `uv run gate_vs_orcestra/rce_simulation.py`.
