@@ -171,7 +171,7 @@ def get_alt_diff(ds, altdim="altitude"):
 
 
 # %%
-#- processing files, if not pinned could take some time
+# - processing files, if not pinned could take some time
 for file in files:
     l2 = xr.open_dataset(f"ipfs://{file}", engine="zarr")
     if l2.sonde_qc.values == 0:
