@@ -40,7 +40,7 @@ dZ = {}
 for key, dx in datasets.items():
     ds = dx
     gamma = ds.ta.diff(dim="altitude", label="lower") / 10.0
-    q = 0.5 * ds.ta.diff(dim="altitude", label="lower") + ds.q
+    q = 0.5 * ds.q.diff(dim="altitude", label="lower") + ds.q
     R = mtc.Rd + (mtc.Rv - mtc.Rd) * q
     chi = R / mtc.gravity_earth
     dlnp = np.log(ds.p).diff(dim="altitude", label="lower")
