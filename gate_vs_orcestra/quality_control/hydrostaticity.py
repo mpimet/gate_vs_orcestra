@@ -76,7 +76,7 @@ dP = {}
 for key, dx in datasets.items():
     ds = dx
     gamma = ds.ta.diff(dim="altitude", label="lower") / 10
-    q = 0.5 * ds.ta.diff(dim="altitude", label="lower") + ds.q
+    q = 0.5 * ds.q.diff(dim="altitude", label="lower") + ds.q
     R = mtc.Rd + (mtc.Rv - mtc.Rd) * q
     chi = R / mtc.gravity_earth
     dP[key] = (
@@ -104,8 +104,6 @@ ax2.set_xlabel("$z$ / m")
 ax2.set_ylabel("$(P-p)$ / hPa")
 ax1.legend(fontsize=8, loc="upper left")
 sns.despine(offset=10)
-# %%
-
 # %% [markdown]
 ## Simple Example
 # illustrates how grouping gives more spread in observed values
@@ -173,6 +171,7 @@ def get_alt_diff(ds, altdim="altitude"):
 
 
 # %%
+
 for file in files:
     l2 = xr.open_dataset(f"ipfs://{file}", engine="zarr")
     # print(file)
@@ -216,3 +215,5 @@ sns.histplot(
     label="Rapsodi: median {:.2f} m".format(np.nanmedian(np.concatenate(rapsres))),
 )
 plt.legend()
+
+# %%
