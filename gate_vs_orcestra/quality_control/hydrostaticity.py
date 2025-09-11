@@ -146,7 +146,7 @@ print(
 
 l2res = []
 files = dus.fsglob(
-    f"ipfs://{cids['orcestra']}/products/HALO/dropsondes/Level_2/HALO-*/*.zarr",
+    f"ipfs://{cids['orcestra']}/HALO/dropsondes/Level_2/HALO-*/*.zarr",
 )
 files
 
@@ -171,10 +171,9 @@ def get_alt_diff(ds, altdim="altitude"):
 
 
 # %%
-
+#- processing files, if not pinned could take some time
 for file in files:
     l2 = xr.open_dataset(f"ipfs://{file}", engine="zarr")
-    # print(file)
     if l2.sonde_qc.values == 0:
         l2res.append(get_alt_diff(l2.swap_dims({"time": "gpsalt"}), altdim="gpsalt"))
 # %%
