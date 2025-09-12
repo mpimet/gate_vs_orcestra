@@ -6,29 +6,50 @@ import numpy as np
 import xarray as xr
 
 
-def get_atmosphere(co2, nlev=256):
+def get_ozone_profile(p, period):
+    match period.lower():
+        case "gate":
+            ds = xr.open_dataset("../data/mean_GATE_v0_east_GATE_sd_bg_int.nc")
+        case "orcestra":
+            ds = xr.open_dataset("../data/mean_RAPSODI_L2_v0_east_sd_bg_int.nc")
+
+    ds = (
+        ds.squeeze()
+        .assign_coords(p_lay=(("z_lay",), ds.p_lay.squeeze().values))
+        .swap_dims(z_lay="p_lay")
+    )
+
+    return ds.interp(p_lay=p)["o3_mmr"] * 28.9647 / 47.9982  # mmr -> vmr
+
+
+def get_atmosphere(co2, o3="rcemip", nlev=256):
     plev, phlev = konrad.utils.get_pressure_grids(1000e2, 1, nlev)
     atmosphere = konrad.atmosphere.Atmosphere(phlev)
     atmosphere["CO2"][:] = co2
 
+    if o3.lower() in ("gate", "orcestra"):
+        atmosphere["O3"][0] = get_ozone_profile(plev, o3.lower())
+
     return atmosphere
 
 
-def run_rce(co2=400e-6, sst=300):
+def run_rce(co2=400e-6, sst=300, o3="rcemip"):
     """Run RCE at given CO2 concentration and fixed SST."""
+    # Store output to tempfile.
     outfile = tempfile.NamedTemporaryFile(delete=False, suffix=".nc").name
 
     rce = konrad.RCE(
-        atmosphere=get_atmosphere(co2=co2),
+        atmosphere=get_atmosphere(co2=co2, o3=o3),
         surface=konrad.surface.FixedTemperature(temperature=sst),
-        # lapserate=konrad.lapserate.BoundaryLayer(),
         humidity=konrad.humidity.FixedRH(konrad.humidity.Manabe67()),
-        timestep="3h",
+        ozone=konrad.ozone.Cariolle() if o3 == "interactive" else None,
+        timestep="1h",
         max_duration="150d",
         outfile=outfile,
     )
     rce.run()
 
+    # Open relevant netCDF groups
     ds = xr.merge(
         [
             xr.open_dataset(outfile, group="atmosphere"),
@@ -45,83 +66,99 @@ def run_rce(co2=400e-6, sst=300):
     return ds
 
 
+def plot_comparison(gate, orcestra, alt_lim=(0, 40_000, 2**7)):
+    alt = np.linspace(*alt_lim)
+
+    gate_z = (
+        gate.assign_coords(z=gate.z[-1])
+        .swap_dims(plev="z")
+        .interp(z=alt, method="pchip")
+    )
+    orcestra_z = (
+        orcestra.assign_coords(z=orcestra.z[-1])
+        .swap_dims(plev="z")
+        .interp(z=alt, method="pchip")
+    )
+    diff_z = orcestra_z - gate_z
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.axvline(0, c="k", lw=0.8)
+
+    ax.plot(diff_z["T"].isel(time=-1), alt / 1000.0, color="#333")
+
+    horizontal_marks = (
+        (gate["cold_point_height"] / 1000.0, "tab:blue"),
+        (gate["convective_top_height"][-1] / 1000.0, "tab:red"),
+        (orcestra["cold_point_height"] / 1000.0, "tab:blue"),
+        (orcestra["convective_top_height"][-1] / 1000.0, "tab:red"),
+    )
+
+    for z, c in horizontal_marks:
+        ax.axhline(
+            z,
+            color=c,
+            lw=0.8,
+            zorder=0,
+        )
+
+    ax.set_xlim(-10, 7.5)
+    ax.set_xticks(
+        [
+            -10,
+            np.round(diff_z["T"].min().values, 1),
+            0,
+            np.round((orcestra - gate).temperature.isel(time=-1), 1),
+            np.round(diff_z["T"].max().values, 1),
+        ]
+    )
+    ax.set_xlabel("$\\Delta T$ / K")
+    ax.set_ylim(0, alt.max() / 1000)
+    ax.set_yticks(
+        [
+            0,
+            5,
+            10,
+            15,
+            20,
+            25,
+            30,
+            35,
+        ]
+    )
+    ax.set_ylabel("$z$ / km")
+
+    return fig, ax
+
+
+def print_changes(gate, orcestra):
+    gate_cp = gate["cold_point_height"].values
+    gate_ct = gate["convective_top_height"][-1].values
+    orcestra_cp = orcestra["cold_point_height"].values
+    orcestra_ct = orcestra["convective_top_height"][-1].values
+
+    print("z / m | Cold point | Convective top")
+    print("--- | --- | ---")
+    print(f"GATE | {gate_cp:.0f} | {gate_ct:.0f}")
+    print(f"ORCESTRA | {orcestra_cp:.0f} | {orcestra_ct:.0f}")
+    print(f"Diff |  {orcestra_cp - gate_cp:.0f} | {orcestra_ct - gate_ct:.0f} ")
+
+
 # GATE
 gate_co2 = 303.5e-6
-gate = run_rce(co2=gate_co2, sst=300.0)
+gate = run_rce(co2=gate_co2, o3="gate", sst=300.0)
 
 # ORCESTRA
 orcestra_co2 = 422.8e-6
-orcestra_co2_e = np.exp(1.5 * np.log(orcestra_co2 / gate_co2)) * gate_co2
-orcestra = run_rce(co2=orcestra_co2_e, sst=301.5)
+orcestra_co2_e = (
+    np.exp(1.5 * np.log(orcestra_co2 / gate_co2)) * gate_co2
+)  # CO2 equivalent forcing
+orcestra = run_rce(co2=orcestra_co2_e, o3="orcestra", sst=301.5)
 
 
-gate["lw_flxu_clr"][-1, -1].values, orcestra["lw_flxu_clr"][-1, -1].values
-
-
-alt = np.linspace(0, 40_000, 2**7)
-
-gate_z = (
-    gate.assign_coords(z=gate.z[-1]).swap_dims(plev="z").interp(z=alt, method="pchip")
-)
-orcestra_z = (
-    orcestra.assign_coords(z=orcestra.z[-1])
-    .swap_dims(plev="z")
-    .interp(z=alt, method="pchip")
-)
-diff_z = orcestra_z - gate_z
-
-fig, ax = plt.subplots(figsize=(6, 6))
-ax.spines["right"].set_visible(False)
-ax.spines["top"].set_visible(False)
-ax.axvline(0, c="k", lw=0.8)
-
-ax.plot(diff_z["T"].isel(time=-1), alt / 1000.0, color="#333")
-
-horizontal_marks = (
-    (gate["cold_point_height"] / 1000.0, "tab:blue"),
-    (gate["convective_top_height"][-1] / 1000.0, "tab:red"),
-    (orcestra["cold_point_height"] / 1000.0, "tab:blue"),
-    (orcestra["convective_top_height"][-1] / 1000.0, "tab:red"),
-)
-
-for z, c in horizontal_marks:
-    ax.axhline(
-        z,
-        color=c,
-        lw=0.8,
-        zorder=0,
-    )
-
-
-ax.set_xlim(-10, 7.5)
-ax.set_xticks(
-    [
-        -10,
-        np.round(diff_z["T"].min().values, 1),
-        0,
-        np.round((orcestra - gate).temperature.isel(time=-1), 1),
-        np.round(diff_z["T"].max().values, 1),
-    ]
-)
-ax.set_xlabel("$\\Delta T$ / K")
-ax.set_ylim(0, alt.max() / 1000)
-ax.set_yticks(
-    [
-        0,
-        5,
-        10,
-        15,
-        20,
-        25,
-        30,
-        35,
-    ]
-)
-ax.set_ylabel("$z$ / km")
+fig, ax = plot_comparison(gate, orcestra)
 fig.savefig("gate_vs_orcestra_rce.png")
 
 
-diff_z["T"][-1].sel(z=slice(20e3, 30e3)).mean().values
-
-
-[h[0].values * 1000 for h in horizontal_marks]
+print_changes(gate, orcestra)
