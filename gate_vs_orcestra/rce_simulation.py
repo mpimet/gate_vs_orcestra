@@ -22,18 +22,17 @@ def get_ozone_profile(p, period):
     return ds.interp(p_lay=p)["o3_mmr"] * 28.9647 / 47.9982  # mmr -> vmr
 
 
-def get_atmosphere(co2, o3="rcemip", nlev=256):
+def get_atmosphere(co2, o3, nlev=256):
     plev, phlev = konrad.utils.get_pressure_grids(1000e2, 1, nlev)
     atmosphere = konrad.atmosphere.Atmosphere(phlev)
-    atmosphere["CO2"][:] = co2
 
-    if o3.lower() in ("gate", "orcestra"):
-        atmosphere["O3"][0] = get_ozone_profile(plev, o3.lower())
+    atmosphere["CO2"][:] = co2
+    atmosphere["O3"][0] = get_ozone_profile(plev, o3.lower())
 
     return atmosphere
 
 
-def run_rce(co2=400e-6, sst=300, o3="rcemip"):
+def run_rce(co2, o3, sst):
     """Run RCE at given CO2 concentration and fixed SST."""
     # Store output to tempfile.
     outfile = tempfile.NamedTemporaryFile(delete=False, suffix=".nc").name
@@ -42,7 +41,6 @@ def run_rce(co2=400e-6, sst=300, o3="rcemip"):
         atmosphere=get_atmosphere(co2=co2, o3=o3),
         surface=konrad.surface.FixedTemperature(temperature=sst),
         humidity=konrad.humidity.FixedRH(konrad.humidity.Manabe67()),
-        ozone=konrad.ozone.Cariolle() if o3 == "interactive" else None,
         timestep="1h",
         max_duration="150d",
         outfile=outfile,
