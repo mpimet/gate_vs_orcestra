@@ -55,28 +55,27 @@ def run_rce(co2, o3, sst):
             xr.open_dataset(outfile, group="surface"),
             xr.open_dataset(outfile, group="radiation"),
         ],
-    )
-
-    ds = ds.assign(
+    ).assign(
         cold_point_height=rce.atmosphere["z"][-1, rce.atmosphere.get_cold_point_index()]
     )
 
     return ds
 
 
-def plot_comparison(gate, orcestra, alt_lim=(0, 40_000, 2**7)):
-    alt = np.linspace(*alt_lim)
+# +
+def interpolate_altitude(ds, start=0, stop=40_000, num=2**7):
+    alt = np.linspace(start, stop, num)
 
-    gate_z = (
-        gate.assign_coords(z=gate.z[-1])
-        .swap_dims(plev="z")
-        .interp(z=alt, method="pchip")
+    return (
+        ds.assign_coords(z=ds.z[-1]).swap_dims(plev="z").interp(z=alt, method="pchip")
     )
-    orcestra_z = (
-        orcestra.assign_coords(z=orcestra.z[-1])
-        .swap_dims(plev="z")
-        .interp(z=alt, method="pchip")
-    )
+
+
+def plot_comparison(gate, orcestra):
+    gate_z = interpolate_altitude(gate)
+    orcestra_z = interpolate_altitude(orcestra)
+
+    alt = gate_z.z.values
     diff_z = orcestra_z - gate_z
 
     fig, ax = plt.subplots(figsize=(6, 6))
@@ -142,6 +141,8 @@ def print_changes(gate, orcestra):
     print(f"ORCESTRA | {orcestra_cp:.0f} | {orcestra_ct:.0f}")
     print(f"Diff |  {orcestra_cp - gate_cp:.0f} | {orcestra_ct - gate_ct:.0f} ")
 
+
+# -
 
 # GATE
 gate_co2 = 303.5e-6
