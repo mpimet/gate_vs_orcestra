@@ -7,6 +7,12 @@ import xarray as xr
 
 
 def get_ozone_profile(p, period):
+    """Return an ozone profile in pressure coordinates.
+
+    Parameters:
+        p (ndarray): Pressure coordinate to interpolate to
+        period (str): Time period ("gate" or "orcestra")
+    """
     match period.lower():
         case "gate":
             ds = xr.open_dataset("../data/mean_GATE_v0_east_GATE_sd_bg_int.nc")
@@ -23,6 +29,13 @@ def get_ozone_profile(p, period):
 
 
 def get_atmosphere(co2, o3, nlev=256):
+    """Create a konrad atmosphere.
+
+    Parameters:
+        co2 (float): CO2 volume mixing ratio
+        o3 (str): Ozone profile ("gate" or "orcestra")
+        nlev (int): Number of pressure levels
+    """
     plev, phlev = konrad.utils.get_pressure_grids(1000e2, 1, nlev)
     atmosphere = konrad.atmosphere.Atmosphere(phlev)
 
@@ -64,6 +77,14 @@ def run_rce(co2, o3, sst):
 
 # +
 def interpolate_altitude(ds, start=0, stop=40_000, num=2**7):
+    """Interpolate konrad results from pressure to altitude coordinates
+
+    Parameters:
+        ds (xr.Dataset): konrad results
+        start (float): Lowest altitude
+        stop (float): Highest altitude
+        num (int): Number of altitude levels
+    """
     alt = np.linspace(start, stop, num)
 
     return (
@@ -72,6 +93,7 @@ def interpolate_altitude(ds, start=0, stop=40_000, num=2**7):
 
 
 def plot_comparison(gate, orcestra):
+    """Compate two konrad results."""
     gate_z = interpolate_altitude(gate)
     orcestra_z = interpolate_altitude(orcestra)
 
@@ -130,6 +152,7 @@ def plot_comparison(gate, orcestra):
 
 
 def print_changes(gate, orcestra):
+    """Print change in cold-point/convective top as Markdown table."""
     gate_cp = gate["cold_point_height"].values
     gate_ct = gate["convective_top_height"][-1].values
     orcestra_cp = orcestra["cold_point_height"].values
