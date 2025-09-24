@@ -30,8 +30,11 @@ bs_GA = dpp.sel_gate_A(bs_PE)
 # %%
 # - plot geographic distribution of soundings
 #
+cw = 190 / 25.4
 sns.set_context(context="paper")
-fig, ax = plt.subplots(figsize=(5, 5), subplot_kw={"projection": ccrs.PlateCarree()})
+fig, ax = plt.subplots(
+    figsize=(cw, cw * 2 / 3), subplot_kw={"projection": ccrs.PlateCarree()}
+)
 
 ngso = len(gs_PE.sonde)
 nrso = len(rs_PE.sonde)
@@ -221,12 +224,12 @@ h_p2 = mlines.Line2D(
 
 ax.legend(
     bbox_to_anchor=(-0.15, 1.10),
-    title="GATE A/B           ORCESTRA East",
+    title="ORCESTRA East              GATE A/B             ",
     ncol=2,
     loc="upper left",
     framealpha=1,
     handles=[h_g2, h_b2, h_r2, h_p1, h_g1, h_b1, h_r1],
-    fontsize=6,
+    fontsize=8,
 )
 
 xticks = [-34, -27.0, -23.5, -20]
@@ -268,6 +271,7 @@ ax.annotate(
 
 ax.annotate("GATE A/B array", xy=(-20.3, 9.55), fontsize=8)
 ax.annotate("ORCESTRA East", xy=(-35.5, 11.5), fontsize=8)
+fig.tight_layout()
 plt.savefig("plots/gate-orcestra-sondes.pdf")
 
 # %%
