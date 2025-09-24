@@ -18,40 +18,13 @@ import seaborn as sns
 
 es = svp.liq_wagner_pruss
 # %%
-# - get HALO data
-halo = (
-    xr.open_dataset(
-        "ipfs://bafybeif52irmuurpb27cujwpqhtbg5w6maw4d7zppg2lqgpew25gs5eczm",
-        engine="zarr",
-    )
-    .rename_vars(
-        {
-            "IRS_LAT": "latitude",
-            "IRS_LON": "longitude",
-            "IRS_ALT": "altitude",
-        }
-    )
-    .set_coords(({"latitude", "longitude", "altitude"}))
-).pipe(dpp.sel_percusion_E, item_var="TIME", lon_var="longitude", lat_var="latitude")
-
-hal = (
-    halo.swap_dims({"TIME": "altitude"})
-    .sortby("altitude")
-    .sel(altitude=slice(14000, None))
-)
-halo_rh = halo.RELHUM.where(halo.RELHUM < 70, drop=True) / 100.0
-halo_tk = halo.TS.where(halo.RELHUM < 70, drop=True)
-x = hal.swap_dims({"altitude": "TIME"})
-zbar = x.altitude.mean().values
-# %%
-halo
-# %%
 # - load data
 #
 cids = dus.get_cids()
 beach = dus.open_dropsondes(cids["dropsondes"])
 rapsodi = dus.open_radiosondes(cids["radiosondes"])
 gate = dus.open_gate(cids["gate"])
+# ds = xr.open_zarr("ipfs://QmeuZD1kiMxorc5DYC7zyJef1Qyu8cDa21JZzZCSj4qpzT") # xr.open_dataset("ipfs://QmeuZD1kiMxorc5DYC7zyJef1Qyu8cDa21JZzZCSj4qpzT", engine="zarr")
 # %%
 # - localize data into different domains
 #
@@ -77,14 +50,40 @@ rs_bar = rs_PE_bar
 bs_bar = bs_PE_bar
 
 # %%
+# - get aircraft data
+halo = (
+    xr.open_dataset(
+        "ipfs://bafybeif52irmuurpb27cujwpqhtbg5w6maw4d7zppg2lqgpew25gs5eczm",
+        engine="zarr",
+    )
+    .rename_vars(
+        {
+            "IRS_LAT": "latitude",
+            "IRS_LON": "longitude",
+            "IRS_ALT": "altitude",
+        }
+    )
+    .set_coords(({"latitude", "longitude", "altitude"}))
+).pipe(dpp.sel_percusion_E, item_var="TIME", lon_var="longitude", lat_var="latitude")
+
+hal = (
+    halo.swap_dims({"TIME": "altitude"})
+    .sortby("altitude")
+    .sel(altitude=slice(14000, None))
+)
+halo_rh = halo.RELHUM.where(halo.RELHUM < 70, drop=True) / 100.0
+halo_tk = halo.TS.where(halo.RELHUM < 70, drop=True)
+x = hal.swap_dims({"altitude": "TIME"})
+zbar = x.altitude.mean().values
+# %%
 # - parameters for soundings
 #
 sfc_vals = {}
-sondes = {"gate": gs_GA, "rapsodi": rs_GA}
-for sset in ["gate", "rapsodi"]:
+sondes = {"gate": gs_PE, "rapsodi": rs_PE, "beach": bs_PE}
+for sset in ["gate", "rapsodi", "beach"]:
     xs = sondes[sset]
     P_sfc = xs.p.sel(altitude=slice(10, 50)).max(dim="altitude") + 100
-    RH_sfc = xs.rh.sel(altitude=slice(0, 30)).max(dim="altitude")
+    RH_sfc = xs.rh.sel(altitude=slice(0, 50)).max(dim="altitude")
     T_sfc = mtf.theta2T(
         xs.theta.sel(altitude=slice(None, 400)).mean(dim="altitude"), P_sfc
     )
@@ -95,28 +94,9 @@ for sset in ["gate", "rapsodi"]:
         "T": T_sfc.mean(),
         "q": q_sfc.mean(),
     }
-
-T_sfc = sfc_vals["rapsodi"]["T"] + 1.0
-q_sfc = mtf.partial_pressure_to_specific_humidity(
-    sfc_vals["rapsodi"]["RH"] * es(T_sfc), sfc_vals["rapsodi"]["P"]
-)
-sfc_vals["rapsodi_p02"] = {
-    "P": sfc_vals["rapsodi"]["P"],
-    "RH": sfc_vals["rapsodi"]["RH"],
-    "T": T_sfc,
-    "q": q_sfc,
-}
-
-for sset in ["gate", "rapsodi", "rapsodi_p02"]:
-    for key, val in sfc_vals[sset].items():
-        print(f"{key}: {val.values:.5f}")
-
-T_gate = sfc_vals["gate"]["T"].values
-q_gate = sfc_vals["gate"]["q"].values
-T_orce = sfc_vals["rapsodi"]["T"].values
-q_orce = sfc_vals["rapsodi"]["q"].values
-T_op02 = sfc_vals["rapsodi_p02"]["T"].values
-q_op02 = sfc_vals["rapsodi_p02"]["q"].values
+    print(
+        f"{sset:10s}: RH = {RH_sfc.mean().values:.3f}, T = {T_sfc.mean().values:.2f} K, P = {P_sfc.mean().values / 100:.1f} hPa"
+    )
 # %%
 # - zero-degree isotherms
 #
@@ -175,29 +155,39 @@ RHice = svp.ice_wagner_etal(Tx) / svp.liq_wagner_pruss(Tx)
 #
 datasets = {"rapsodi": rs_bar, "beach": bs_bar, "gate": gs_bar}
 
+ct_ticks = {}
 print("Height and temerature of convective top:")
 for key, ds in datasets.items():
     z_ct = (
         mtf.brunt_vaisala_frequency(ds.theta, ds.q, ds.altitude)
         .sel(altitude=slice(5e3, 15e3))
+        .coarsen(altitude=2, boundary="trim")
+        .mean()
         .idxmin(dim="altitude")
     )
+    ct_ticks[key] = z_ct.values
     print(f" {key}: z at convective top: {z_ct.values:.2f} m ")
-
-# %%
 
 # %%
 # - create theoretical soundings
 #
-P = np.arange(100900.0, 4000.0, -500)
+Px = 100900.0
+P = np.arange(Px, 4000.0, -500)
 
-r_consrv = thermo.make_sounding_from_adiabat(P, T_orce, q_orce)
-g_consrv = thermo.make_sounding_from_adiabat(P, T_gate, q_gate)
-p_pseudo = thermo.make_sounding_from_adiabat(P, T_op02, q_op02, thx=mtf.theta_e_bolton)
-r_pseudo = thermo.make_sounding_from_adiabat(P, T_orce, q_orce, thx=mtf.theta_e_bolton)
-g_pseudo = thermo.make_sounding_from_adiabat(P, T_gate, q_gate, thx=mtf.theta_e_bolton)
-r_wthice = thermo.make_sounding_from_adiabat(P, T_orce, q_orce, integrate=True)
-g_wthice = thermo.make_sounding_from_adiabat(P, T_gate, q_gate, integrate=True)
+T1 = sfc_vals["gate"]["T"].values
+RHx = sfc_vals["gate"]["RH"].values
+q1 = mtf.partial_pressure_to_specific_humidity(RHx * es(T1), Px)
+
+T2 = sfc_vals["rapsodi"]["T"].values
+RHx = sfc_vals["gate"]["RH"].values
+q2 = mtf.partial_pressure_to_specific_humidity(RHx * es(T2), Px)
+
+pseudo1 = thermo.make_sounding_from_adiabat(P, T1, q1, thx=mtf.theta_e_bolton, Tmin=195)
+pseudo2 = thermo.make_sounding_from_adiabat(P, T2, q2, thx=mtf.theta_e_bolton, Tmin=195)
+consrv2 = thermo.make_sounding_from_adiabat(P, T2, q2)
+
+zz = np.arange(0, 15000, 10)
+delta_pseudo = pseudo2.T - pseudo1.T.interp(altitude=pseudo2.altitude)
 
 # %%
 # - plot profiles
@@ -217,8 +207,8 @@ gs_bar.ta.plot(c=colors["gate"], ls="-", label="GATE-RS", **kwargs)
 rs_bar.ta.plot(c=colors["rapsodi"], ls="-", label="ORCESTRA-RS", **kwargs)
 bs_bar.ta.plot(c=colors["beach"], ls="-", label="ORCESTRA-DS", **kwargs)
 
-r_pseudo["T"].plot(c="grey", ls="--", **kwargs)
-r_consrv["T"].plot(c="grey", ls=":", **kwargs)
+pseudo2["T"].plot(c="grey", ls="--", **kwargs)
+consrv2["T"].plot(c="grey", ls=":", **kwargs)
 
 ax[0].plot(
     [halo_tk.quantile(0.35), halo_tk.quantile(0.65)],
@@ -261,7 +251,7 @@ sns.despine(ax=ax[0], offset={"bottom": 0, "left": 10})
 kwargs = {"ax": ax[1], "y": "altitude", "ylim": ylim, "xlim": (0, 1)}
 rs_bar.rh.plot(c=colors["rapsodi"], ls="-", **kwargs)
 bs_bar.sel(altitude=slice(None, 12000)).rh.plot(c=colors["beach"], ls="-", **kwargs)
-gs_bar.rh.plot(c=colors["gate"], ls="-", **kwargs)
+gs_bar.rh.where(gs_bar.ta > 220).plot(c=colors["gate"], ls="-", **kwargs)
 
 ax[1].plot(
     [halo_rh.quantile(0.35), halo_rh.quantile(0.65)],
@@ -327,12 +317,12 @@ mtf.brunt_vaisala_frequency(gs_bar.theta, gs_bar.q, gs_bar.altitude).plot(
     c=colors["gate"], ls="-", label="gate", **kwargs
 )
 
-mtf.brunt_vaisala_frequency(
-    r_pseudo["theta"], r_pseudo["q"], r_pseudo["altitude"]
-).plot(c="grey", ls="--", label="pseudo", **kwargs)
-mtf.brunt_vaisala_frequency(
-    r_consrv["theta"], r_consrv["q"], r_consrv["altitude"]
-).plot(c="grey", ls=":", label="moist", **kwargs)
+mtf.brunt_vaisala_frequency(pseudo2["theta"], pseudo2["q"], pseudo2["altitude"]).plot(
+    c="grey", ls="--", label="pseudo", **kwargs
+)
+mtf.brunt_vaisala_frequency(consrv2["theta"], consrv2["q"], consrv2["altitude"]).plot(
+    c="grey", ls=":", label="moist", **kwargs
+)
 
 
 nt1 = mtf.brunt_vaisala_frequency(rs_bar.theta, rs_bar.q, rs_bar.altitude, axis=0).sel(
@@ -341,6 +331,17 @@ nt1 = mtf.brunt_vaisala_frequency(rs_bar.theta, rs_bar.q, rs_bar.altitude, axis=
 nt2 = mtf.brunt_vaisala_frequency(rs_bar.theta, rs_bar.q, rs_bar.altitude, axis=0).sel(
     altitude=slice(9000, None)
 )
+
+for x in ["rapsodi", "gate"]:
+    print(ct_ticks[x])
+    ax[2].axhline(ct_ticks[x], xmin=0.5, xmax=0.8, lw=1, ls=":", c=colors[x])
+
+ax[2].annotate(
+    "$z_\\mathrm{ct}$",
+    xy=(0.0135, (ct_ticks["rapsodi"] + ct_ticks["gate"]) / 2),
+    fontsize=8,
+)
+
 ax[2].set_xticks([np.round(nt2.min().values, 3), np.round(nt1.max().values, 3)])
 ax[2].set_xlim(0.005, 0.015)
 ax[2].set_xlabel("$N$ / s")
@@ -356,32 +357,28 @@ plt.show()
 #
 ylim = (0, 23000)
 
-x = r_pseudo["T"]
-x = x - g_pseudo["T"].values
-x = x.where(x > 0.01)
-
-y = p_pseudo["T"]
-y = y - g_pseudo["T"].values
-y = y.where(y > 1.1).where(y.altitude > 3000)
-
-dtheta_rs = rs_bar.theta - gs_bar.theta
-dtheta_bs = bs_bar.theta - gs_bar.theta
+delta_T_rs = rs_bar.ta - gs_bar.ta
+delta_T_bs = bs_bar.ta - gs_bar.ta
 
 sns.set_context("paper")
 fig, ax = plt.subplots(1, 1, figsize=(cw / 2, cw / 2 * 1.333), sharey=True)
 
-dtheta_rs.plot(
+delta_T_rs.plot(
     ax=ax, y="altitude", ylim=ylim, label="ORCESTRA-RS", color=colors["rapsodi"]
 )
-dtheta_bs.plot(
+delta_T_bs.sel(altitude=slice(None, 14200)).plot(
     ax=ax, y="altitude", ylim=ylim, label="ORCESTRA-DS", color=colors["beach"]
 )
 
-x.plot(ax=ax, y="altitude", color="k", ls="dotted", lw=1)
-y.plot(ax=ax, y="altitude", color="k", ls="dotted", lw=1)
+delta_pseudo.where(delta_pseudo > 0.1, drop=True).plot(
+    ax=ax, y="altitude", color=colors["rapsodi"], ls="dotted", lw=1
+)
+# x = x.where(x > 0.01)
+# x.plot(ax=ax, y="altitude", color="k", ls="dotted", lw=1)
 
 ax.axvline(0, color="grey", lw=0.5, ls="--")
-ax.vlines(-2.18, ymin=20e3, ymax=23e3, color="grey", lw=0.5, ls="-")
+# ax.vlines(-5.6, ymin=20e3, ymax=23e3, color="grey", lw=0.5, ls="-")
+ax.plot([-1, -3], [21.0e3, 23e3], color="grey", lw=0.5, ls="-")
 
 ax.plot(
     np.asarray([-1, 3.5]),
@@ -396,22 +393,22 @@ ax.annotate(
     fontsize=8,
 )
 
-ax.set_xlabel("$\\Delta \\theta$ / K")
+ax.set_xlabel("$\\Delta T$ / K")
 ax.set_ylabel("z / m")
 ax.set_ylabel("z / km")
 
-dth_st = dtheta_rs.sel(altitude=slice(23000, 25000)).mean().values
-dth_bl = dtheta_rs.sel(altitude=slice(200, 600)).mean().values
+dth_st = delta_T_rs.sel(altitude=slice(23000, 24500)).mean().values
+dth_bl = delta_T_bs.sel(altitude=slice(None, 400)).mean().values
 
-ax.annotate("adiabats", xy=(3, 16000), color="k", fontsize=8)
-ax.annotate("RCE", xy=(-2.8, 19200), color="k", fontsize=8)
+ax.annotate("pseudo adiabat", xy=(2.6, 16200), color=colors["rapsodi"], fontsize=8)
+ax.annotate("RCE", xy=(-2.8, 21200), color="k", fontsize=8)
 
 ax.set_xticks(
     [
-        np.round(dtheta_rs.min().values, 2),
+        np.round(delta_T_rs.min().values, 2),
         np.round(dth_st, 2),
         np.round(dth_bl, 2),
-        np.round(dtheta_rs.max().values, 2),
+        np.round(delta_T_rs.max().values, 2),
     ]
 )
 ax.set_xticks([0], minor=True)
@@ -420,7 +417,7 @@ ax.set_yticks(np.arange(0, 21500, 3000))
 ax.set_yticklabels([0, 3, 6, 9, 12, 15, 18, 21])
 ax.set_yticks([z_T0_gate.quantile(0.5), z_T0.quantile(0.5)], minor=True)
 
-plt.legend(loc="lower left", fontsize=8)
+plt.legend(fontsize=8)
 plt.tight_layout()
 sns.despine(offset={"bottom": 0, "left": 5})
 plt.savefig("plots/DeltaT.pdf")
@@ -440,8 +437,8 @@ print(
 print(
     f" Beach: {db.values[2] / db.values[1]:.2f}, and {db.values[2] / db.values[0]:.2f}"
 )
-rp = r_pseudo.sel(altitude=slice(0, 12000)).set_coords("P").swap_dims({"altitude": "P"})
-gp = g_pseudo.sel(altitude=slice(0, 12000)).set_coords("P").swap_dims({"altitude": "P"})
+rp = pseudo2.sel(altitude=slice(0, 12000)).set_coords("P").swap_dims({"altitude": "P"})
+gp = pseudo1.sel(altitude=slice(0, 12000)).set_coords("P").swap_dims({"altitude": "P"})
 dp = (rp.interp(P=pgrid) - gp.interp(P=pgrid))["T"]
 print(
     f" Pseudo-adiabat: {dp.values[2] / dp.values[1]:.2f}, and {dp.values[2] / dp.values[0]:.2f}"
@@ -508,14 +505,14 @@ ax[0].set_xlabel("$\\theta_\\mathrm{bl}$ / K")
 
 x1 = (
     rapsodi["theta"]
-    .sel(altitude=slice(0, 600))
+    .sel(altitude=slice(0, 500))
     .stack(points=["sonde", "altitude"])
     .quantile(0.5)
     .values
 )
 x2 = (
     gate["theta"]
-    .sel(altitude=slice(0, 600))
+    .sel(altitude=slice(0, 500))
     .stack(points=["sonde", "altitude"])
     .quantile(0.5)
     .values
