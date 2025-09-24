@@ -24,7 +24,6 @@ cids = dus.get_cids()
 beach = dus.open_dropsondes(cids["dropsondes"])
 rapsodi = dus.open_radiosondes(cids["radiosondes"])
 gate = dus.open_gate(cids["gate"])
-# ds = xr.open_zarr("ipfs://QmeuZD1kiMxorc5DYC7zyJef1Qyu8cDa21JZzZCSj4qpzT") # xr.open_dataset("ipfs://QmeuZD1kiMxorc5DYC7zyJef1Qyu8cDa21JZzZCSj4qpzT", engine="zarr")
 # %%
 # - localize data into different domains
 #
