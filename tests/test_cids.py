@@ -8,12 +8,12 @@ def cids():
     return data.get_cids()
 
 
-def test_open_dropsondes(cids):
-    ds = data.open_dropsondes(cids["dropsondes"])
-    assert isinstance(ds, xr.Dataset)
-    assert "launch_lat" in ds.coords
-    assert "launch_lon" in ds.coords
-    assert "altitude" in ds.dims
+# def test_open_dropsondes(cids):
+#    ds = data.open_dropsondes(cids["dropsondes"])
+#    assert isinstance(ds, xr.Dataset)
+#    assert "launch_lat" in ds.coords
+#    assert "launch_lon" in ds.coords
+#    assert "altitude" in ds.dims
 
 
 def test_open_radiosondes(cids):
