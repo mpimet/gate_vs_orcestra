@@ -52,18 +52,8 @@ def open_dropsondes(cid, local=False):
     if local:
         ds = xr.open_dataset(cid, engine="zarr")
     else:
-        ds = (
-            xr.open_dataset(f"ipfs://{cid}", engine="zarr")
-            .rename(
-                {
-                    "aircraft_latitude": "launch_lat",
-                    "aircraft_longitude": "launch_lon",
-                    "aircraft_msl_altitude": "launch_altitude",
-                    "lat": "latitude",
-                    "lon": "longitude",
-                }
-            )
-            .reset_coords(["launch_altitude"])
+        ds = xr.open_dataset(f"ipfs://{cid}", engine="zarr").reset_coords(
+            ["launch_altitude"]
         )
     return ds
 
@@ -74,21 +64,22 @@ def open_radiosondes(cid, local=False):
     else:
         ds = (
             xr.open_dataset(f"ipfs://{cid}", engine="zarr")
-            .rename(
-                {
-                    "alt": "altitude",
-                    "sounding": "sonde_id",
-                    "flight_time": "bin_average_time",
-                    "flight_lat": "latitude",
-                    "flight_lon": "longitude",
-                    "platform": "platform_id",
-                }
-            )
-            .reset_coords(
-                ["p", "latitude", "longitude", "bin_average_time", "sonde_id"]
-            )
-            .drop_dims(["nv"])
-            .swap_dims({"launch_time": "sonde"})
+            # .rename(
+            # {
+            #    "alt": "altitude",
+            # "sounding": "sonde_id",
+            # "flight_time": "bin_average_time",
+            # "flight_lat": "latitude",
+            # "flight_lon": "longitude",
+            # "platform": "platform_id",
+            # }
+            # )
+            # .reset_coords(
+            #    ["p", "latitude", "longitude", "bin_average_time", "sonde_id"]
+            # )
+            # .drop_dims(["nv"])
+            # .swap_dims({"launch_time": "sonde"})
+            .set_coords(["launch_lat", "launch_lon", "launch_time"])
         )
     return ds
 
