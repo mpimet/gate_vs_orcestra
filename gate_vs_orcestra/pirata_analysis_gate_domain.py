@@ -5,16 +5,45 @@ import random
 import numpy as np
 from scipy.stats import linregress
 import matplotlib.ticker as mticker
+import utilities.data_utils as dus
 from utilities.settings_and_colors import colors
 import utilities.preprocessing as pp
 
 # %%
 # - Loading and reformatting the data
 
-tsrf_anal = pp.get_tsrf_berkeley(extent="gate_ab")
-
-# %%
+best = pp.get_tsrf_berkeley(extent="gate_ab")
 pirata = pp.get_pirata()
+
+cids = dus.get_cids()
+ships = {
+    "gate": dus.open_meteor2("/Users/m219063/work/data/orcestra/gate/meteor/*.nc").pipe(
+        pp.sel_gate_A, item_var="time", lon_var="lon", lat_var="lat"
+    ),
+    "orcestra": dus.open_meteor3(cids["meteor3"]).pipe(
+        pp.sel_gate_A, item_var="time", lon_var="lon", lat_var="lat"
+    ),
+}
+
+Toff = -0.8
+ship_data = {}
+for campaign, ds in ships.items():
+    ship_data[campaign] = {}
+    for Tfld in ["sst", "ta"]:
+        ship_data[campaign][Tfld] = np.asarray(
+            [
+                ds[Tfld].quantile(0.1).values + Toff,
+                ds[Tfld].quantile(0.3).values + Toff,
+                ds[Tfld].quantile(0.5).values + Toff,
+                ds[Tfld].quantile(0.7).values + Toff,
+                ds[Tfld].quantile(0.9).values + Toff,
+            ]
+        )
+        print(ship_data[campaign][Tfld])
+
+Tfld = "sst"
+ship_data["orcestra"]["year"] = 2024
+ship_data["gate"]["year"] = 1974
 
 # %%
 # - Paper Figure
@@ -25,35 +54,31 @@ cw = 190 / 25.4  # A4 Column width with 1cm margins
 print(cw)
 fig, ax = plt.subplots(1, 2, figsize=(cw, cw / 2))
 
-offset = 300.26 - 301.25 + 0.2
-meteor2 = np.asarray([299.85, 300.05, 300.15, 300.35, 300.55]) + offset
-meteor3 = np.asarray([300.75, 300.95, 301.25, 301.35, 301.55]) + offset
+for campaign in ["orcestra", "gate"]:
+    ds = ship_data[campaign]
+    ax[0].plot(
+        [ds["year"], ds["year"]],
+        [ds[Tfld][1], ds[Tfld][3]],
+        lw=2.5,
+        c=colors[campaign],
+        label=f"Meteor {campaign}",
+        zorder=2,
+    )
+    ax[0].plot(
+        [ds["year"], ds["year"]],
+        [ds[Tfld][0], ds[Tfld][4]],
+        lw=0.5,
+        c=colors[campaign],
+        zorder=2,
+    )
+    ax[0].plot(
+        [ds["year"] - 0.2, ds["year"] + 0.2],
+        [ds[Tfld][2], ds[Tfld][2]],
+        lw=3,
+        c="w",
+        zorder=2,
+    )
 
-ax[0].plot(
-    [1974, 1974],
-    [meteor2[1], meteor2[3]],
-    lw=2.5,
-    c=colors["gate"],
-    label="Meteor GATE",
-    zorder=2,
-)
-
-ax[0].plot([1974, 1974], [meteor2[0], meteor2[4]], lw=0.5, c=colors["gate"], zorder=2)
-
-ax[0].plot(
-    [2024, 2024],
-    [meteor3[1], meteor3[3]],
-    lw=2.5,
-    c=colors["orcestra"],
-    label="Meteor ORCESTRA",
-    zorder=2,
-)
-
-ax[0].plot(
-    [2024, 2024], [meteor3[0], meteor3[4]], lw=0.5, c=colors["orcestra"], zorder=2
-)
-ax[0].plot([1973.8, 1974.1], [meteor2[2], meteor2[2]], lw=3, c="w", zorder=2)
-ax[0].plot([2023.9, 2024.1], [meteor3[2], meteor3[2]], lw=3, c="w", zorder=2)
 
 Tmax = {}
 Tmin = {}
@@ -102,16 +127,14 @@ for sel_lat in [
 year_slice = slice(1974, None)
 
 slope, intercept, r_value, _, _ = linregress(
-    tsrf_anal.year.sel(year=year_slice).values,
-    tsrf_anal.sel(year=year_slice).values,
+    best.year.sel(year=year_slice).values,
+    best.sel(year=year_slice).values,
 )
 print(f"K/dec={slope * 10:.2f}, $R^2$={r_squared:.2f})")
-tsrf_anal.plot(
-    ax=ax[0], marker=".", linestyle="", color=colors["best"], label="Berkeley"
-)
+best.plot(ax=ax[0], marker=".", linestyle="", color=colors["best"], label="Berkeley")
 ax[0].plot(
-    tsrf_anal.year.sel(year=year_slice).values,
-    slope * tsrf_anal.year.sel(year=year_slice).values + intercept,
+    best.year.sel(year=year_slice).values,
+    slope * best.year.sel(year=year_slice).values + intercept,
     linestyle="--",
     color=colors["best"],
     linewidth=1.5,
@@ -120,14 +143,14 @@ ax[0].plot(
 
 year_slice = slice(2006, None)
 slope, intercept, r_value, _, _ = linregress(
-    tsrf_anal.year.sel(year=year_slice).values,
-    tsrf_anal.sel(year=year_slice).values,
+    best.year.sel(year=year_slice).values,
+    best.sel(year=year_slice).values,
 )
 
 print(f"slope for {year_slice}: {slope}")
-slope, intercept, r_value, _, _ = linregress(tsrf_anal.year.values, tsrf_anal.values)
+slope, intercept, r_value, _, _ = linregress(best.year.values, best.values)
 print("slope whole period", slope)
-rean_resid = tsrf_anal - (slope * tsrf_anal.year.values + intercept)
+rean_resid = best - (slope * best.year.values + intercept)
 print(rean_resid.std().values)
 
 ax[0].set_xticks(np.arange(1974, 2025, 10))
@@ -139,7 +162,12 @@ ax[0].set_xlabel("year")
 ax[0].set_ylabel(r"$T$ / K")
 ax[0].tick_params(axis="x", rotation=0)
 ax[0].legend(fontsize=8, ncol=1)
-ax[0].set_yticks([np.around(meteor2[2], 2), np.round(meteor3[2], 2)])
+ax[0].set_yticks(
+    [
+        np.around(ship_data["gate"][Tfld][2], 2),
+        np.round(ship_data["orcestra"][Tfld][2], 2),
+    ]
+)
 
 sn.despine(offset=0, ax=ax[0])
 
