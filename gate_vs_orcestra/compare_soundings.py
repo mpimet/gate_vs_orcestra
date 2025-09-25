@@ -22,8 +22,8 @@ es = svp.liq_wagner_pruss
 #
 cids = dus.get_cids()
 beach = dus.open_dropsondes(cids["dropsondes"])
-rapsodi = dus.open_radiosondes(cids["radiosondes"])
-gate = dus.open_gate(cids["gate"])
+rapsodi = dus.open_radiosondes("/Users/m219063/work/data/RAPSODI_l2.zarr", local=True)
+gate = dus.open_gate("/Users/m219063/work/data/GATE_l3.zarr", local=True)
 # %%
 # - localize data into different domains
 #

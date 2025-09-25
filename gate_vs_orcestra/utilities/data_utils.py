@@ -1,3 +1,4 @@
+import glob
 import intake
 import hashlib
 import numpy as np
@@ -47,46 +48,63 @@ def hash_xr_var(da):
     )
 
 
-def open_dropsondes(cid):
-    ds = xr.open_dataset(f"ipfs://{cid}", engine="zarr")
-    return ds.rename(
-        {
-            "aircraft_latitude": "launch_lat",
-            "aircraft_longitude": "launch_lon",
-            "aircraft_msl_altitude": "launch_altitude",
-            "lat": "latitude",
-            "lon": "longitude",
-        }
-    ).reset_coords(["launch_altitude"])
-
-
-def open_radiosondes(cid):
-    ds = xr.open_dataset(f"ipfs://{cid}", engine="zarr")
-    return (
-        ds.rename(
-            {
-                "alt": "altitude",
-                "sounding": "sonde_id",
-                "flight_time": "bin_average_time",
-                "flight_lat": "latitude",
-                "flight_lon": "longitude",
-                "platform": "platform_id",
-            }
+def open_dropsondes(cid, local=False):
+    if local:
+        ds = xr.open_dataset(cid, engine="zarr")
+    else:
+        ds = (
+            xr.open_dataset(f"ipfs://{cid}", engine="zarr")
+            .rename(
+                {
+                    "aircraft_latitude": "launch_lat",
+                    "aircraft_longitude": "launch_lon",
+                    "aircraft_msl_altitude": "launch_altitude",
+                    "lat": "latitude",
+                    "lon": "longitude",
+                }
+            )
+            .reset_coords(["launch_altitude"])
         )
-        .reset_coords(["p", "latitude", "longitude", "bin_average_time", "sonde_id"])
-        .drop_dims(["nv"])
-        .swap_dims({"launch_time": "sonde"})
-    )
+    return ds
 
 
-def open_gate(cid):
-    ds = xr.open_dataset(f"ipfs://{cid}", engine="zarr")
-    return (
-        ds.set_coords(["launch_lat", "launch_lon", "launch_time"])
-        .swap_dims({"sonde": "launch_time"})
-        .sel(launch_time=slice("1974-08-10", "1974-09-30"))
-        .swap_dims({"launch_time": "sonde"})
-    )
+def open_radiosondes(cid, local=False):
+    if local:
+        ds = xr.open_dataset(cid, engine="zarr")
+    else:
+        ds = (
+            xr.open_dataset(f"ipfs://{cid}", engine="zarr")
+            .rename(
+                {
+                    "alt": "altitude",
+                    "sounding": "sonde_id",
+                    "flight_time": "bin_average_time",
+                    "flight_lat": "latitude",
+                    "flight_lon": "longitude",
+                    "platform": "platform_id",
+                }
+            )
+            .reset_coords(
+                ["p", "latitude", "longitude", "bin_average_time", "sonde_id"]
+            )
+            .drop_dims(["nv"])
+            .swap_dims({"launch_time": "sonde"})
+        )
+    return ds
+
+
+def open_gate(cid, local=False):
+    if local:
+        ds = xr.open_dataset(cid, engine="zarr")
+    else:
+        ds = (
+            xr.open_dataset(f"ipfs://{cid}", engine="zarr")
+            .set_coords(["launch_lat", "launch_lon", "launch_time"])
+            .swap_dims({"sonde": "launch_time"})
+            .sel(launch_time=slice("1974-08-10", "1974-09-30"))
+            .swap_dims({"launch_time": "sonde"})
+        )
+    return ds
 
 
 def open_reanalysis(chunks=None, **kwargs):
@@ -108,6 +126,7 @@ def get_cids():
         "radiosondes": f"{orcestra_main}/Radiosondes/RAPSODI_RS_ORCESTRA_level2.zarr",
         "dropsondes": f"{orcestra_main}/HALO/dropsondes/Level_3/PERCUSION_Level_3.zarr",
         "halo": "bafybeif52irmuurpb27cujwpqhtbg5w6maw4d7zppg2lqgpew25gs5eczm",
+        "meteor3": "bafybeib5awa3le6nxi4rgepn2mwxj733aazpkmgtcpa3uc2744gxv7op44",
     }
 
 
@@ -127,6 +146,39 @@ def open_halo(cid=get_cids()["halo"]):
             "IRS_ALT": "altitude",
         }
     ).set_coords(({"latitude", "longitude", "altitude"}))
+
+
+def open_meteor2(path):
+    f = sorted(glob.glob(path))
+    ds = (
+        xr.open_mfdataset((f[0], f[3], f[4], f[5], f[2]))
+        .sel(time=slice("1974-08-10", "1974-09-30"))
+        .squeeze()
+    )
+    ds["sst"] = ds["sst"] + 273.15
+    ds["sst"].attrs = {"long_name": "sea surface temperature", "units": "kelvin"}
+    ds = ds.rename(
+        {"temperature": "ta", "pressure": "p", "latitude": "lat", "longitude": "lon"}
+    )
+    ds["ta"] = ds["ta"] + 273.15
+    ds["ta"].attrs = {"long_name": "air temperature", "units": "kelvin"}
+    ds["p"] = ds["p"] * 100
+    ds["p"].attrs = {"long_name": "air pressure", "units": "Pa"}
+    return ds
+
+
+def open_meteor3(cid):
+    print(cid)
+    ds = (
+        xr.open_dataset(f"ipfs://{cid}", engine="zarr")
+        .sel(time=slice("2024-08-10", "2024-09-30"))
+        .squeeze()
+    )
+    ds["sst"] = (ds.sst_extern_port + ds.sst_extern_board) / 2.0
+    ds["ta"] = (ds.t_air_port + ds.t_air_board) / 2.0
+    ds["sst"].attrs = {"long_name": "sea surface temperature", "units": "kelvin"}
+    ds["ta"].attrs = {"long_name": "air temperature", "units": "kelvin"}
+    return ds
 
 
 def fsglob(pattern):
