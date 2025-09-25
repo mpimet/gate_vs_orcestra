@@ -21,9 +21,13 @@ es = svp.liq_wagner_pruss
 # - load data
 #
 cids = dus.get_cids()
-beach = dus.open_dropsondes(cids["dropsondes"])
-rapsodi = dus.open_radiosondes("/Users/m219063/work/data/RAPSODI_l2.zarr", local=True)
-gate = dus.open_gate("/Users/m219063/work/data/GATE_l3.zarr", local=True)
+beach = dus.open_dropsondes("QmNa1bXSVSQqxd9oukPisZvbeqAzJUrEuXy5FShHC1WncS")
+rapsodi = dus.open_radiosondes("QmcQRuqCgLRUVyCXjzmKfRVL34xxnxzL91PWTJSELrtQxa")
+gate = dus.open_gate("QmWZryTDTZu68MBzoRDQRcUJzKdCrP2C4VZfZw1sZWMJJc")
+# %%
+
+# %%
+
 # %%
 # - localize data into different domains
 #
