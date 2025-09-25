@@ -7,17 +7,23 @@ import moist_thermodynamics.functions as mtf
 import utilities.thermo as thermo
 from moist_thermodynamics import saturation_vapor_pressures as svp
 import moist_thermodynamics.constants as mtc
-import utilities.data_utils as data
+import utilities.data_utils as dus
 import utilities.preprocessing as pp
 import utilities.modify_ds as md
 from utilities.settings_and_colors import colors  # noqa
 
 # %%
-cids = data.get_cids()
+# cids = dus.get_cids()
 datasets = {
-    "rapsodi": data.open_radiosondes(cids["radiosondes"]),
-    "beach": data.open_dropsondes(cids["dropsondes"]),
-    "gate": data.open_gate(cids["gate"]),
+    "rapsodi": dus.open_radiosondes(
+        "QmcQRuqCgLRUVyCXjzmKfRVL34xxnxzL91PWTJSELrtQxa"
+    ),  # data.open_radiosondes(cids["radiosondes"]),
+    "beach": dus.open_dropsondes(
+        "QmNa1bXSVSQqxd9oukPisZvbeqAzJUrEuXy5FShHC1WncS"
+    ),  # data.open_dropsondes(cids["dropsondes"]),
+    "gate": dus.open_gate(
+        "QmWZryTDTZu68MBzoRDQRcUJzKdCrP2C4VZfZw1sZWMJJc"
+    ),  # data.open_gate(cids["gate"]),
 }
 
 for name, ds in datasets.items():
