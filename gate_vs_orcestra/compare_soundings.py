@@ -21,7 +21,7 @@ es = svp.liq_wagner_pruss
 # - load data
 #
 cids = dus.get_cids()
-beach = dus.open_dropsondes("QmNa1bXSVSQqxd9oukPisZvbeqAzJUrEuXy5FShHC1WncS")
+beach = dus.open_dropsondes(cids["dropsondes"])
 rapsodi = dus.open_radiosondes("QmcQRuqCgLRUVyCXjzmKfRVL34xxnxzL91PWTJSELrtQxa")
 gate = dus.open_gate("QmWZryTDTZu68MBzoRDQRcUJzKdCrP2C4VZfZw1sZWMJJc")
 # %%
