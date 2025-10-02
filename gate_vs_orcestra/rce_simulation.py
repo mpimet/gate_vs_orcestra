@@ -176,7 +176,7 @@ orcestra_co2 = 422.8e-6
 orcestra_co2_e = (
     np.exp(1.5 * np.log(orcestra_co2 / gate_co2)) * gate_co2
 )  # CO2 equivalent forcing
-orcestra = run_rce(co2=orcestra_co2_e, o3="orcestra", sst=301.5)
+orcestra = run_rce(co2=orcestra_co2_e, o3="orcestra", sst=301.3)
 
 
 fig, ax = plot_comparison(gate, orcestra)
