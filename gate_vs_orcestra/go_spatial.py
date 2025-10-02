@@ -18,7 +18,7 @@ from utilities.settings_and_colors import colors, gate_A, percusion_E
 cids = dus.get_cids()
 beach = dus.open_dropsondes(cids["dropsondes"])
 rapsodi = dus.open_radiosondes("QmcQRuqCgLRUVyCXjzmKfRVL34xxnxzL91PWTJSELrtQxa")
-gate = dus.open_gate("QmWZryTDTZu68MBzoRDQRcUJzKdCrP2C4VZfZw1sZWMJJc")
+gate = dus.open_gate(cids["gate"])
 
 gs_PE = dpp.sel_percusion_E(gate)
 rs_PE = dpp.sel_percusion_E(rapsodi)
