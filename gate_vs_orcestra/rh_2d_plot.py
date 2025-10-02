@@ -13,17 +13,15 @@ import utilities.modify_ds as md
 from utilities.settings_and_colors import colors  # noqa
 
 # %%
-# cids = dus.get_cids()
+cids = dus.get_cids()
 datasets = {
     "rapsodi": dus.open_radiosondes(
         "QmcQRuqCgLRUVyCXjzmKfRVL34xxnxzL91PWTJSELrtQxa"
     ),  # data.open_radiosondes(cids["radiosondes"]),
-    "beach": dus.open_dropsondes(
-        "QmNa1bXSVSQqxd9oukPisZvbeqAzJUrEuXy5FShHC1WncS"
-    ),  # data.open_dropsondes(cids["dropsondes"]),
     "gate": dus.open_gate(
         "QmWZryTDTZu68MBzoRDQRcUJzKdCrP2C4VZfZw1sZWMJJc"
     ),  # data.open_gate(cids["gate"]),
+    "beach": dus.open_dropsondes(cids["dropsondes"]),
 }
 
 for name, ds in datasets.items():
