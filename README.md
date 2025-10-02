@@ -37,7 +37,7 @@ Consequently, installation with `uv` is not possible right away.
 However, the following workaround should install Konrad and CliMT to the virtual environment:
 
 ```
-# Activate the `uv` environment directly#
+# Activate the `uv` environment directly
 uv sync
 source .venv/bin/activate
 
