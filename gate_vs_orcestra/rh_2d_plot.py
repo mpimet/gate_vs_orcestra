@@ -18,10 +18,8 @@ datasets = {
     "rapsodi": dus.open_radiosondes(
         "QmcQRuqCgLRUVyCXjzmKfRVL34xxnxzL91PWTJSELrtQxa"
     ),  # data.open_radiosondes(cids["radiosondes"]),
-    "gate": dus.open_gate(
-        "QmWZryTDTZu68MBzoRDQRcUJzKdCrP2C4VZfZw1sZWMJJc"
-    ),  # data.open_gate(cids["gate"]),
     "beach": dus.open_dropsondes(cids["dropsondes"]),
+    "gate": dus.open_gate(cids["gate"]),
 }
 
 for name, ds in datasets.items():
