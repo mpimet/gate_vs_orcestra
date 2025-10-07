@@ -15,9 +15,7 @@ from utilities.settings_and_colors import colors  # noqa
 # %%
 cids = dus.get_cids()
 datasets = {
-    "rapsodi": dus.open_radiosondes(
-        "QmcQRuqCgLRUVyCXjzmKfRVL34xxnxzL91PWTJSELrtQxa"
-    ),  # data.open_radiosondes(cids["radiosondes"]),
+    "rapsodi": dus.open_radiosondes(cids["radiosondes"]),
     "beach": dus.open_dropsondes(cids["dropsondes"]),
     "gate": dus.open_gate(cids["gate"]),
 }
