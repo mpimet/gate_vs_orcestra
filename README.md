@@ -8,9 +8,31 @@ The ORCESTRA campaign is described on [this website](https://orcestra-campaign.o
 Kuettner, J. P.: General description and central program of GATE, Bulletin of the
 American Meteorological Society, 55, 526–530, 1974.
 
+### Accessing the Data
+
+Most of the scripts in this repo use data that is puplicly available on [IPFS](https://docs.ipfs.tech/concepts/what-is-ipfs/). To obtain data from the IPFS network, you need access to an [IPFS Gateway](https://docs.ipfs.tech/concepts/ipfs-gateway).
+
+We recommend that you use your own local gateway for faster access and local caching.
+The simplest solution is to install [IPFS Desktop](https://docs.ipfs.tech/install/ipfs-desktop/), which provides a graphical user interface and runs a [Kubo daemon](https://docs.ipfs.tech/install/command-line/) in the background.
+
+If you are **unable** to install software on your machine (e.g. work laptop), you can configure IPFS to use the public HTTPS gateway by setting:
+
+```
+export IPFS_GATEWAY=https://ipfs.io
+```
+
+To then access the data using Python, you will need to install the [`ipfsspec>=0.6.0`](http://pypi.org/project/ipfsspec/) package.
+It is essential to install `ipfsspec` using pip, the version provided via `conda-forge` is outdated and **broken**.
+
+### Running the scripts in this repo
+
+The python environment for this repo was build using [uv](https://astral.sh/blog/uv). All dependencies  can be found in the `pyproject.toml`, in case you want to build your own environment.
+
+Although most of the (plotting) scripts can be run with this environment, there are a few special cases that are described below.
+
 ### Using PAMTRA for the sondes
 
-This package is build using uv. Using the `uv.lock` is sufficient to run most of the python plotting scripts. However, to use the pamtra model, it has to be installed separately. On levante, the following steps suffice to do that, if run from within the repo.
+To use the pamtra model, it has to be installed separately from the uv environment. On levante, the following steps suffice to do that, if run from within the repo.
 
 ```
 module load git
