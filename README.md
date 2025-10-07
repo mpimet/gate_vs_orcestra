@@ -84,7 +84,7 @@ It should then be possible to run `uv run gate_vs_orcestra/rce_simulation.py`.
 
 ### Re-Creating the high Level radiosonde datasets
 
-For consistency, the GATE Level 1 files as well as the RAPSODI Level 1 data are processed with [pydropsonde (version >= 0.5.1)](https://github.com/atmdrops/pydropsonde). In order to use it, 
+For consistency, the GATE Level 1 files as well as the RAPSODI Level 1 data are processed with [pydropsonde (version >= 0.5.1)](https://github.com/atmdrops/pydropsonde). To use this processing tool  entering: 
 ```
 uv add pydropsonde
 ```
