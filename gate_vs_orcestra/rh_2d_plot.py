@@ -261,14 +261,20 @@ orc_pseudo = calc_iwv(
     )
 )
 # %%
+cw = 190 / 25.4
+fig, ax = plt.subplots(figsize=(cw / 2, cw / 2))
 
-fig, ax = plt.subplots()
-
-(ta_datasets["orcestra"].mean("sonde") - ta_datasets["gate"].mean("sonde")).rh.plot(
-    ax=ax, y="ta"
-)
+ds_diff = ta_datasets["orcestra"].mean("sonde") - ta_datasets["gate"].mean("sonde")
+ds_diff.rh.plot(ax=ax, y="ta")
 ax.invert_yaxis()
 ax.axvline(0, color="k", linestyle="--", alpha=0.5)
+ax.axvline(ds_diff.rh.mean().values, color="k", linestyle=":", alpha=0.5)
+ax.set_xticks(
+    [ds_diff.rh.min().values, ds_diff.rh.mean().values, ds_diff.rh.max().values]
+)
+ax.set_xlabel("RH / 1")
+ax.set_ylabel("$T$ / K")
+
 print(
     (
         ta_datasets["orcestra"].mean("sonde") - ta_datasets["gate"].mean("sonde")
@@ -486,14 +492,15 @@ fig.savefig(
 # %%
 pltcolors = sns.color_palette("Paired", n_colors=8)
 cs_threshold = 0.98
-fig, ax = plt.subplots(figsize=(5, 5))
+cw = 190 / 25.4
+fig, ax = plt.subplots(figsize=(cw / 2, cw / 2))
 
 for name, color_idx in [("orcestra", 0), ("gate", 4)]:
     ds = ta_datasets[name].rh
     ds.where(ds.max(dim="ta") < cs_threshold).mean("sonde").rolling(ta=5).mean().plot(
         y="ta",
         ax=ax,
-        label=f"{name} rh_max < {cs_threshold:.2f}",
+        label=f"{name} rh$_\\mathrm{{max}}$ < {cs_threshold:.2f}",
         c=pltcolors[color_idx],
     )
     ds.mean("sonde").rolling(ta=5).mean().plot(
@@ -502,10 +509,12 @@ for name, color_idx in [("orcestra", 0), ("gate", 4)]:
 
 
 ax.invert_yaxis()
-ax.legend(loc="upper right", fontsize=12)
+ax.legend(loc="upper right", fontsize=10)
 ax.set_xlabel("RH / 1")
 ax.set_ylabel("$T$ / K")
 sns.despine(offset=10)
 fig.savefig(
     "plots/total_vs_clear_sky.pdf",
 )
+
+# %%
