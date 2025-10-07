@@ -65,19 +65,12 @@ def open_radiosondes(cid, local=False):
         ds = (
             xr.open_dataset(f"ipfs://{cid}", engine="zarr")
             # .rename(
-            # {
-            #    "alt": "altitude",
-            # "sounding": "sonde_id",
-            # "flight_time": "bin_average_time",
-            # "flight_lat": "latitude",
-            # "flight_lon": "longitude",
-            # "platform": "platform_id",
-            # }
+            #    {
+            #        "height": "altitude",
+            #        "platform": "platform_id",
+            #    }
             # )
-            # .reset_coords(
-            #    ["p", "latitude", "longitude", "bin_average_time", "sonde_id"]
-            # )
-            # .drop_dims(["nv"])
+            # .reset_coords(["p", "lat", "lon", "interpolated_time", "sonde_id"])
             # .swap_dims({"launch_time": "sonde"})
             .set_coords(["launch_lat", "launch_lon", "launch_time"])
         )
@@ -110,11 +103,11 @@ def open_reanalysis(chunks=None, **kwargs):
 
 
 def get_cids():
-    orcestra_main = "QmRuaDianH2jryvZoehSES2nkqwLrEsbnwgYnRDLsM2cHZ"
+    orcestra_main = "QmXkSUDo97PaDxsPzCPXJXwCFDLBMp7AVdPdV5CBQoagUN"
     return {
         "gate": "QmWZryTDTZu68MBzoRDQRcUJzKdCrP2C4VZfZw1sZWMJJc",
         "orcestra": orcestra_main,
-        "radiosondes": f"{orcestra_main}/products/Radiosondes/Level_2/RAPSODI_RS_ORCESTRA_level2.zarr",
+        "radiosondes": "QmcQRuqCgLRUVyCXjzmKfRVL34xxnxzL91PWTJSELrtQxa",  # f"{orcestra_main}/products/Radiosondes/Level_2/RAPSODI_RS_ORCESTRA_level2.zarr",
         "dropsondes": f"{orcestra_main}/products/HALO/dropsondes/Level_3/PERCUSION_Level_3.zarr",
         "halo": "bafybeif52irmuurpb27cujwpqhtbg5w6maw4d7zppg2lqgpew25gs5eczm",
         "meteor3": "bafybeib5awa3le6nxi4rgepn2mwxj733aazpkmgtcpa3uc2744gxv7op44",
