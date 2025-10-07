@@ -29,6 +29,8 @@ It is essential to install `ipfsspec` using pip, the version provided via `conda
 The python environment for this repo was build using [uv](https://astral.sh/blog/uv). All dependencies  can be found in the `pyproject.toml`, in case you want to build your own environment.
 
 Although most of the (plotting) scripts can be run with this environment, there are a few special cases that are described below.
+=======
+
 
 ### Using PAMTRA for the sondes
 
@@ -78,3 +80,12 @@ python3 -m pip install konrad
 ```
 
 It should then be possible to run `uv run gate_vs_orcestra/rce_simulation.py`.
+
+
+### Re-Creating the high Level radiosonde datasets
+
+For consistency, the GATE Level 1 files as well as the RAPSODI Level 1 data are processed with [pydropsonde (version >= 0.5.1)](https://github.com/atmdrops/pydropsonde). In order to use it, 
+```
+uv add pydropsonde
+```
+should be sufficient to run the `pydropsonde4gate.py` and the `reprocess_rapsodi.py` scripts to reproduce the data used in this repo.
