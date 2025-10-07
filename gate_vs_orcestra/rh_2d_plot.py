@@ -33,7 +33,13 @@ datasets["orcestra"] = xr.concat(
     [datasets["rapsodi"], datasets["beach"]],
     dim="sonde",
 )
-# %%
+
+
+# %% RH-T histograms
+
+
+ta_bin_num = 200
+var_bin_num = 100
 ta_datasets = {name: [] for name in datasets.keys()}
 for name, ds in datasets.items():
     ta_datasets[name].append(
@@ -42,6 +48,8 @@ for name, ds in datasets.items():
             ds.rh.sel(altitude=slice(0, 14000)),
             var_binrange=(0, 1.1),
             ta_binrange=(220, 305),
+            var_bin_num=var_bin_num,
+            ta_bin_num=ta_bin_num,
         ).rename("rh")
     )
 for name, ds in datasets.items():
@@ -51,6 +59,8 @@ for name, ds in datasets.items():
             ds.p.sel(altitude=slice(0, 14000)),
             var_binrange=(10000, 100000),
             ta_binrange=(220, 305),
+            var_bin_num=var_bin_num,
+            ta_bin_num=ta_bin_num,
         ).rename("p")
     )
 for name, ds in datasets.items():
@@ -63,6 +73,8 @@ for name, ds in datasets.items():
         ds.rh.sel(altitude=slice(0, 14000)),
         var_binrange=(0, 1.1),
         ta_binrange=(220, 305),
+        var_bin_num=var_bin_num,
+        ta_bin_num=ta_bin_num,
     )
 
 # %%
@@ -198,14 +210,14 @@ fig, axes = plt.subplot_mosaic(
 )
 
 for ax in [axes["left"], axes["right"]]:
-    ta_datasets["orcestra"].mean("sonde").rolling(ta=5).mean().rh.plot(
+    ta_datasets["orcestra"].mean("sonde").rh.plot(
         label="ORCESTRA",
         y="ta",
         color=colors["orcestra"],
         linewidth=2,
         ax=ax,
     )
-    ta_datasets["gate"].mean("sonde").rolling(ta=5).mean().rh.plot(
+    ta_datasets["gate"].mean("sonde").rh.plot(
         label="GATE",
         y="ta",
         color=colors["gate"],
