@@ -25,14 +25,17 @@ for name, ds in datasets.items():
         ds.pipe(pp.interpolate_gaps).pipe(pp.extrapolate_sfc).pipe(pp.sel_percusion_E)
     )
 # %%
-datasets["rapsodi"] = datasets["rapsodi"].where(
-    datasets["rapsodi"].ascent_flag == 0, drop=True
-)
 datasets["orcestra"] = xr.concat(
     [datasets["rapsodi"], datasets["beach"]],
     dim="sonde",
 )
-# %%
+
+
+# %% RH-T histograms
+
+
+ta_bin_num = 200
+var_bin_num = 100
 ta_datasets = {name: [] for name in datasets.keys()}
 for name, ds in datasets.items():
     ta_datasets[name].append(
@@ -41,6 +44,8 @@ for name, ds in datasets.items():
             ds.rh.sel(altitude=slice(0, 14000)),
             var_binrange=(0, 1.1),
             ta_binrange=(220, 305),
+            var_bin_num=var_bin_num,
+            ta_bin_num=ta_bin_num,
         ).rename("rh")
     )
 for name, ds in datasets.items():
@@ -50,6 +55,8 @@ for name, ds in datasets.items():
             ds.p.sel(altitude=slice(0, 14000)),
             var_binrange=(10000, 100000),
             ta_binrange=(220, 305),
+            var_bin_num=var_bin_num,
+            ta_bin_num=ta_bin_num,
         ).rename("p")
     )
 for name, ds in datasets.items():
@@ -62,12 +69,14 @@ for name, ds in datasets.items():
         ds.rh.sel(altitude=slice(0, 14000)),
         var_binrange=(0, 1.1),
         ta_binrange=(220, 305),
+        var_bin_num=var_bin_num,
+        ta_bin_num=ta_bin_num,
     )
 
-# %%
+# %% additional lines for RH-T plot
 
 
-es_liq = svp.liq_wagner_pruss
+es_liq = svp.liq_hardy  # liq_wagner_pruss
 es_ice = svp.ice_wagner_etal
 es_mixed = mtf.make_es_mxd(es_liq=es_liq, es_ice=es_ice)
 
@@ -122,9 +131,18 @@ fix_q_rh_high = mtf.specific_humidity_to_relative_humidity(
     es=es_mixed,
 )
 # %% get iwv
-#
+
+iwv = {}
+for name, ds in datasets.items():
+    iwv[name] = ds.where(
+        np.all(~np.isnan(ds.sel(altitude=slice(0, 8000)).q), axis=1)
+        & (ds.q > 0)
+        & np.all(~np.isnan(ds.sel(altitude=slice(0, 8000)).p), axis=1)
+        & np.all(~np.isnan(ds.sel(altitude=slice(0, 8000)).ta), axis=1),
+    )
 
 
+# %%
 def density_from_q(p, T, q):
     Rd = mtc.dry_air_gas_constant
     Rv = mtc.water_vapor_gas_constant
@@ -138,50 +156,130 @@ def calc_iwv(ds):
     return ds
 
 
-iwv = {}
-for name, ds in datasets.items():
-    iwv[name] = ds.where(
-        np.all(~np.isnan(ds.sel(altitude=slice(0, 8000)).q), axis=1)
-        & (ds.q > 0)
-        & np.all(~np.isnan(ds.sel(altitude=slice(0, 8000)).p), axis=1)
-        & np.all(~np.isnan(ds.sel(altitude=slice(0, 8000)).ta), axis=1),
-    )
-    iwv[name] = calc_iwv(iwv[name])
+for name, ds in iwv.items():
+    iwv[name] = calc_iwv(ds)
 
+# %%
 P = np.arange(100900.0, 4000.0, -500)
 
-orc_sfc = datasets["orcestra"].sel(altitude=0).mean("sonde")
-gate_sfc = datasets["gate"].sel(altitude=0).mean("sonde")
+orc_sfc = iwv["orcestra"].sel(altitude=0).mean("sonde")
+gate_sfc = iwv["gate"].sel(altitude=0).mean("sonde")
 
 orc_pseudo = thermo.make_sounding_from_adiabat(
     P, orc_sfc.ta.values, orc_sfc.q.values, thx=mtf.theta_e_bolton
 ).rename({"T": "ta", "P": "p"})
+orc_pseudo = orc_pseudo.where(orc_pseudo.ta > 200, drop=True)
 gate_pseudo = thermo.make_sounding_from_adiabat(
     P, gate_sfc.ta.values, gate_sfc.q.values, thx=mtf.theta_e_bolton
 ).rename({"T": "ta", "P": "p"})
-# %%
-rh_orc = (
-    datasets["orcestra"]
-    .mean(dim="sonde")
-    .swap_dims({"altitude": "p"})
-    .dropna(dim="p", how="any", subset=["p"])
-    .rh.interp(p=P)
-)
+gate_pseudo = gate_pseudo.where(gate_pseudo.ta > 200, drop=True)
 
-q_gate = mtf.relative_humidity_to_specific_humidity(
-    RH=rh_orc,
-    p=P,
-    T=gate_pseudo.ta.swap_dims({"altitude": "p"}),
-)
-gate_pseudo = calc_iwv(gate_pseudo.assign(q=("altitude", q_gate.values)))
-q_orc = mtf.relative_humidity_to_specific_humidity(
-    RH=rh_orc,
-    p=P,
-    T=orc_pseudo.ta.swap_dims({"altitude": "p"}),
-)
-orc_pseudo = calc_iwv(orc_pseudo.assign(q=("altitude", q_orc.values)))
 
 # %%
+def get_rh(datasets, rhname, pseudo_ds):
+    mean_ta = datasets[rhname].mean(dim="sonde").dropna(dim="altitude", subset=["ta"])
+    _, idx = np.unique(mean_ta.ta, return_index=True)
+    lcl = (
+        pseudo_ds.swap_dims({"altitude": "p"})
+        .sel(
+            p=mtf.plcl_bolton(
+                mean_ta.ta.sel(altitude=0),
+                mean_ta.p.sel(altitude=0),
+                mean_ta.q.sel(altitude=0),
+            ),
+            method="nearest",
+        )
+        .altitude
+    )
+    return xr.concat(
+        [
+            mean_ta.rh.interp(
+                altitude=pseudo_ds.altitude.sel(altitude=slice(None, lcl))
+            ).isel(altitude=slice(0, -1)),
+            (
+                mean_ta.isel(altitude=idx)
+                .swap_dims({"altitude": "ta"})
+                .rh.interp(ta=pseudo_ds.ta.values)
+                .to_dataset()
+                .assign(
+                    altitude=("ta", pseudo_ds.altitude.values),
+                )
+                .swap_dims({"ta": "altitude"})
+                .sel(altitude=slice(lcl, None))
+                .reset_coords("ta")
+                .rh
+            ),
+        ],
+        dim="altitude",
+    )
+
+
+ref_rh = "orcestra"
+gate_pseudo = gate_pseudo.assign(
+    rh=("altitude", get_rh(iwv, ref_rh, gate_pseudo).values)
+).sel(altitude=slice(0, 11500))
+orc_pseudo = orc_pseudo.assign(
+    rh=("altitude", get_rh(iwv, ref_rh, orc_pseudo).values)
+).sel(altitude=slice(0, 11500))
+# %%
+
+fig, ax = plt.subplots()
+ax.plot(
+    gate_pseudo.rh,
+    gate_pseudo.ta,
+    label="GATE",
+    color=colors["gate"],
+)
+ax.plot(
+    orc_pseudo.rh,
+    orc_pseudo.ta,
+    label="ORCESTRA",
+    color=colors["orcestra"],
+)
+ax.invert_yaxis()
+sns.despine()
+# %%
+gate_pseudo = calc_iwv(
+    gate_pseudo.assign(
+        q=mtf.relative_humidity_to_specific_humidity(
+            RH=gate_pseudo.rh,  # + 0.013,
+            p=gate_pseudo.p,
+            T=gate_pseudo.ta,
+            es=svp.liq_hardy,
+        )
+    )
+)
+orc_pseudo = calc_iwv(
+    orc_pseudo.assign(
+        q=mtf.relative_humidity_to_specific_humidity(
+            RH=orc_pseudo.rh,
+            p=orc_pseudo.p,
+            T=orc_pseudo.ta,
+            es=svp.liq_hardy,
+        )
+    )
+)
+# %%
+cw = 190 / 25.4
+fig, ax = plt.subplots(figsize=(cw / 2, cw / 2))
+
+ds_diff = ta_datasets["orcestra"].mean("sonde") - ta_datasets["gate"].mean("sonde")
+ds_diff.rh.plot(ax=ax, y="ta")
+ax.invert_yaxis()
+ax.axvline(0, color="k", linestyle="--", alpha=0.5)
+ax.axvline(ds_diff.rh.mean().values, color="k", linestyle=":", alpha=0.5)
+ax.set_xticks(
+    [ds_diff.rh.min().values, ds_diff.rh.mean().values, ds_diff.rh.max().values]
+)
+ax.set_xlabel("RH / 1")
+ax.set_ylabel("$T$ / K")
+
+print(
+    (
+        ta_datasets["orcestra"].mean("sonde") - ta_datasets["gate"].mean("sonde")
+    ).rh.mean()
+)
+sns.despine()
 
 # %%
 cw = 190 / 25.4
@@ -197,14 +295,14 @@ fig, axes = plt.subplot_mosaic(
 )
 
 for ax in [axes["left"], axes["right"]]:
-    ta_datasets["orcestra"].mean("sonde").rolling(ta=5).mean().rh.plot(
+    ta_datasets["orcestra"].mean("sonde").rh.plot(
         label="ORCESTRA",
         y="ta",
         color=colors["orcestra"],
         linewidth=2,
         ax=ax,
     )
-    ta_datasets["gate"].mean("sonde").rolling(ta=5).mean().rh.plot(
+    ta_datasets["gate"].mean("sonde").rh.plot(
         label="GATE",
         y="ta",
         color=colors["gate"],
@@ -357,7 +455,7 @@ ax.annotate(
     fontsize=8,
     ha="center",
     va="bottom",
-    arrowprops=dict(arrowstyle="-[, widthB=4, lengthB=.1", lw=2.0),
+    arrowprops=dict(arrowstyle="-[, widthB=4.7, lengthB=.1", lw=2.0),
 )
 
 ax.annotate(
@@ -393,14 +491,15 @@ fig.savefig(
 # %%
 pltcolors = sns.color_palette("Paired", n_colors=8)
 cs_threshold = 0.98
-fig, ax = plt.subplots(figsize=(5, 5))
+cw = 190 / 25.4
+fig, ax = plt.subplots(figsize=(cw / 2, cw / 2))
 
 for name, color_idx in [("orcestra", 0), ("gate", 4)]:
     ds = ta_datasets[name].rh
     ds.where(ds.max(dim="ta") < cs_threshold).mean("sonde").rolling(ta=5).mean().plot(
         y="ta",
         ax=ax,
-        label=f"{name} rh_max < {cs_threshold:.2f}",
+        label=f"{name} rh$_\\mathrm{{max}}$ < {cs_threshold:.2f}",
         c=pltcolors[color_idx],
     )
     ds.mean("sonde").rolling(ta=5).mean().plot(
@@ -409,10 +508,12 @@ for name, color_idx in [("orcestra", 0), ("gate", 4)]:
 
 
 ax.invert_yaxis()
-ax.legend(loc="upper right", fontsize=12)
+ax.legend(loc="upper right", fontsize=10)
 ax.set_xlabel("RH / 1")
 ax.set_ylabel("$T$ / K")
 sns.despine(offset=10)
 fig.savefig(
     "plots/total_vs_clear_sky.pdf",
 )
+
+# %%
