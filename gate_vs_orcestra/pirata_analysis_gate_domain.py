@@ -17,13 +17,15 @@ pirata = pp.get_pirata()
 
 cids = dus.get_cids()
 ships = {
-    "gate": dus.open_meteor2("/Users/m219063/work/data/orcestra/gate/meteor/*.nc").pipe(
+    "gate": dus.open_meteor2("/Users/m219063/work/data/orcestra/gate/ships/METEOR.zarr").pipe(
         pp.sel_gate_A, item_var="time", lon_var="lon", lat_var="lat"
     ),
     "orcestra": dus.open_meteor3(cids["meteor3"]).pipe(
         pp.sel_gate_A, item_var="time", lon_var="lon", lat_var="lat"
     ),
 }
+ships["gate"]
+# %%
 
 Toff = -0.8
 ship_data = {}
@@ -130,6 +132,9 @@ slope, intercept, r_value, _, _ = linregress(
     best.year.sel(year=year_slice).values,
     best.sel(year=year_slice).values,
 )
+fit_line = slope * years + intercept
+r_squared = r_value**2
+
 print(f"K/dec={slope * 10:.2f}, $R^2$={r_squared:.2f})")
 best.plot(ax=ax[0], marker=".", linestyle="", color=colors["best"], label="Berkeley")
 ax[0].plot(

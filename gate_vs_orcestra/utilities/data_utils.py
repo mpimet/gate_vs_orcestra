@@ -132,23 +132,8 @@ def open_halo(cid=get_cids()["halo"]):
     ).set_coords(({"latitude", "longitude", "altitude"}))
 
 
-def open_meteor2(path):
-    f = sorted(glob.glob(path))
-    ds = (
-        xr.open_mfdataset((f[0], f[3], f[4], f[5], f[2]))
-        .sel(time=slice("1974-08-10", "1974-09-30"))
-        .squeeze()
-    )
-    ds["sst"] = ds["sst"] + 273.15
-    ds["sst"].attrs = {"long_name": "sea surface temperature", "units": "kelvin"}
-    ds = ds.rename(
-        {"temperature": "ta", "pressure": "p", "latitude": "lat", "longitude": "lon"}
-    )
-    ds["ta"] = ds["ta"] + 273.15
-    ds["ta"].attrs = {"long_name": "air temperature", "units": "kelvin"}
-    ds["p"] = ds["p"] * 100
-    ds["p"].attrs = {"long_name": "air pressure", "units": "Pa"}
-    return ds
+def open_meteor2(cid):
+    return xr.open_dataset(cid,engine="zarr")
 
 
 def open_meteor3(cid):
