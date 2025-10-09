@@ -69,7 +69,7 @@ sns.despine(offset=10)
 plt.show()
 
 # %%
-# - plot histograms of gate vs orcestra sst 
+# - plot histograms of gate vs orcestra sst
 datasets = {
     #   "gate_gridded": {"data": gate_ships.sst, "color": "orangered"},
     "meteor-gate": {"data": ships["gate"].sst, "color": "fuchsia"},
@@ -91,7 +91,7 @@ plt.legend()
 plt.show()
 
 # %%
-# - plot histograms of gate vs orcestra sst 
+# - plot histograms of gate vs orcestra sst
 tristan_chord = {
     "GATE": {"data": ships["gate"].sst, "color": "navy"},
     "ORCESTRA": {"data": ships["orcestra"].sst, "color": "orangered"},
