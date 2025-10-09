@@ -107,7 +107,7 @@ def get_cids():
     return {
         "gate": "QmWZryTDTZu68MBzoRDQRcUJzKdCrP2C4VZfZw1sZWMJJc",
         "orcestra": orcestra_main,
-        "radiosondes": "QmcQRuqCgLRUVyCXjzmKfRVL34xxnxzL91PWTJSELrtQxa",  # f"{orcestra_main}/products/Radiosondes/Level_2/RAPSODI_RS_ORCESTRA_level2.zarr",
+        "radiosondes": "QmcQRuqCgLRUVyCXjzmKfRVL34xxnxzL91PWTJSELrtQxa",
         "dropsondes": f"{orcestra_main}/products/HALO/dropsondes/Level_3/PERCUSION_Level_3.zarr",
         "halo": "bafybeif52irmuurpb27cujwpqhtbg5w6maw4d7zppg2lqgpew25gs5eczm",
         "meteor3": "bafybeib5awa3le6nxi4rgepn2mwxj733aazpkmgtcpa3uc2744gxv7op44",
@@ -131,9 +131,13 @@ def open_halo(cid=get_cids()["halo"]):
         }
     ).set_coords(({"latitude", "longitude", "altitude"}))
 
-
-def open_meteor2(cid):
-    return xr.open_dataset(cid,engine="zarr")
+def open_meteor2(path="../data/rvs/meteor-gate.zarr"):
+    ds = (
+        xr.open_dataset(path, engine="zarr")
+        .sel(time=slice("2024-08-10", "2024-09-30"))
+        .squeeze()
+    )
+    return xr.open_dataset(f"../data/rvs/meteor-gate.zarr", engine="zarr")
 
 
 def open_meteor3(cid):

@@ -1,57 +1,79 @@
 # %%
-# plot sst and air temperatures from ships
-
+# - plot sst and air temperatures from ships
 import glob
 import xarray as xr
 import utilities.preprocessing as pre
+import utilities.data_utils as dus
 import seaborn as sns
 import matplotlib.pyplot as plt
 
 # %%
-files = sorted(glob.glob(f"{'/Users/m219063/work/data/orcestra/gate/meteor'}/*.nc"))
-files = (files[0], files[3], files[4], files[5], files[2])
-meteor2 = (
-    xr.open_mfdataset(files)
-    .sel(time=slice("1974-08-10", "1974-09-30"))
-    .pipe(pre.sel_gate_A, item_var="time", lon_var="longitude", lat_var="latitude")
-    .squeeze()
-)
-meteor3 = (
-    xr.open_dataset(
-        "ipfs://bafybeib5awa3le6nxi4rgepn2mwxj733aazpkmgtcpa3uc2744gxv7op44",
-        engine="zarr",
-    )
-    .sel(time=slice("2024-08-10", "2024-09-30"))
-    .pipe(pre.sel_gate_A, item_var="time", lon_var="lon", lat_var="lat")
-    .reset_coords("lat")
-    .reset_coords("lon")
-)
+# - process or load ship data
+reprocess_ships = False
+ships = {
+    "dallas": "DALLAS",
+    "faye": "FAYE",
+    "gilliss": "JAMES_M_GILLISS",
+    "researcher": "RESEARCHER",
+    "meteor-gate": "METEOR",
+    "planet": "PLANET",
+}
+datasets = {}
+for ship, path in ships.items():
+    fname = f"../data/rvs/{ship}.zarr"
+    if reprocess_ships:
+        files = sorted(
+            glob.glob(f"/Users/m219063/work/data/orcestra/GATE_v3/DSHIP/{path}/*.nc")
+        )
+        xs = []
+        for file in files:
+            xs.append(xr.open_dataset(file))
+        ds = xr.concat(xs, dim="time").drop_duplicates(dim="time").sortby("time")
+        ds.to_zarr(fname, mode="w")
+    datasets[ship] = xr.open_dataset(fname, engine="zarr")
 
-files = sorted(glob.glob(f"{'/Users/m219063/work/data/orcestra/gate/ssts'}/*.nc"))
-gate_ships = (
-    xr.open_mfdataset(files)
-    .sel(time=slice("1974-08-10", "1974-09-30"))
-    .stack(points=("time", "latitude", "longitude"))
-    .pipe(pre.sel_gate_A, item_var="points", lon_var="longitude", lat_var="latitude")
+datasets["meteor"] = xr.open_dataset(
+    "ipfs://bafybeib5awa3le6nxi4rgepn2mwxj733aazpkmgtcpa3uc2744gxv7op44",
+    engine="zarr",
 )
+# %%
+# - calculate sst median values and Ts offsets
+cids = dus.get_cids()
+ships = {
+    "gate": dus.open_meteor2(path="../data/rvs/meteor-gate.zarr").pipe(
+        pre.sel_gate_A, item_var="time", lon_var="lon", lat_var="lat"
+    ),
+    "orcestra": dus.open_meteor3(cids["meteor3"]).pipe(
+        pre.sel_gate_A, item_var="time", lon_var="lon", lat_var="lat"
+    ),
+}
+for campaign, ds in ships.items():
+    print(
+        f"{campaign}: SST = {ds['sst'].quantile(0.5).values:.3f}K, Temp. Air = {ds['ta'].quantile(0.5).values:.3F}K"
+    )
 
 # %%
-meteor2.temperature.plot.scatter(alpha=0.5)
-meteor2.sst.plot.scatter(alpha=0.5)
+# - quick plots of time-series
+ships["gate"].sst.plot.scatter(alpha=0.5)
+ships["gate"].ta.plot.scatter(alpha=0.5)
 
 sns.despine(offset=10)
 plt.show()
 
 # %%
-meteor3_sst = (meteor3.sst_extern_port + meteor3.sst_extern_board) / 2.0
-meteor3_sst.plot.scatter(s=20)
+
+ships["orcestra"].sst.plot.scatter(alpha=0.5)
+ships["orcestra"].ta.plot.scatter(alpha=0.5)
+
+sns.despine(offset=10)
 plt.show()
 
 # %%
+# - plot histograms of gate vs orcestra sst 
 datasets = {
-    "gate_gridded": {"data": gate_ships.sst, "color": "orangered"},
-    "meteor-gate": {"data": meteor2.sst, "color": "fuchsia"},
-    "meteor-orchestra": {"data": meteor3_sst, "color": "navy"},
+    #   "gate_gridded": {"data": gate_ships.sst, "color": "orangered"},
+    "meteor-gate": {"data": ships["gate"].sst, "color": "fuchsia"},
+    "meteor-orchestra": {"data": ships["orcestra"].sst, "color": "navy"},
 }
 for key, dx in datasets.items():
     if dx["data"].mean() < 200:
@@ -69,9 +91,10 @@ plt.legend()
 plt.show()
 
 # %%
+# - plot histograms of gate vs orcestra sst 
 tristan_chord = {
-    "GATE": {"data": meteor2.sst, "color": "navy"},
-    "ORCESTRA": {"data": meteor3_sst, "color": "orangered"},
+    "GATE": {"data": ships["gate"].sst, "color": "navy"},
+    "ORCESTRA": {"data": ships["orcestra"].sst, "color": "orangered"},
 }
 
 cw = 190 / 25.4  # A4 Column width with 1cm margins
@@ -96,4 +119,3 @@ sns.despine(offset=10)
 plt.legend()
 plt.savefig("plots/tristan.pdf", bbox_inches="tight")
 plt.show()
-# %%

@@ -17,7 +17,7 @@ pirata = pp.get_pirata()
 
 cids = dus.get_cids()
 ships = {
-    "gate": dus.open_meteor2("/Users/m219063/work/data/orcestra/gate/ships/METEOR.zarr").pipe(
+    "gate": dus.open_meteor2().pipe(
         pp.sel_gate_A, item_var="time", lon_var="lon", lat_var="lat"
     ),
     "orcestra": dus.open_meteor3(cids["meteor3"]).pipe(
@@ -27,7 +27,7 @@ ships = {
 ships["gate"]
 # %%
 
-Toff = -0.8
+Toff = -0.75
 ship_data = {}
 for campaign, ds in ships.items():
     ship_data[campaign] = {}
@@ -35,9 +35,9 @@ for campaign, ds in ships.items():
         ship_data[campaign][Tfld] = np.asarray(
             [
                 ds[Tfld].quantile(0.1).values + Toff,
-                ds[Tfld].quantile(0.3).values + Toff,
+                ds[Tfld].quantile(0.333).values + Toff,
                 ds[Tfld].quantile(0.5).values + Toff,
-                ds[Tfld].quantile(0.7).values + Toff,
+                ds[Tfld].quantile(0.667).values + Toff,
                 ds[Tfld].quantile(0.9).values + Toff,
             ]
         )
