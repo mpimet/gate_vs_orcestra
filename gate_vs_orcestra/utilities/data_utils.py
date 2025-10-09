@@ -1,4 +1,3 @@
-import glob
 import intake
 import hashlib
 import numpy as np
@@ -131,13 +130,14 @@ def open_halo(cid=get_cids()["halo"]):
         }
     ).set_coords(({"latitude", "longitude", "altitude"}))
 
+
 def open_meteor2(path="../data/rvs/meteor-gate.zarr"):
     ds = (
         xr.open_dataset(path, engine="zarr")
-        .sel(time=slice("2024-08-10", "2024-09-30"))
+        .sel(time=slice("1974-08-10", "1974-09-30"))
         .squeeze()
     )
-    return xr.open_dataset(f"../data/rvs/meteor-gate.zarr", engine="zarr")
+    return ds
 
 
 def open_meteor3(cid):
