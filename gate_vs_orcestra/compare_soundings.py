@@ -381,7 +381,7 @@ delta_pseudo.where(delta_pseudo > 0.1, drop=True).plot(
 
 ax.axvline(0, color="grey", lw=0.5, ls="--")
 # ax.vlines(-5.6, ymin=20e3, ymax=23e3, color="grey", lw=0.5, ls="-")
-ax.plot([-1, -3], [21.0e3, 23e3], color="grey", lw=0.5, ls="-")
+ax.plot([-1, -2.5], [21.0e3, 23e3], color="grey", lw=0.5, ls="-")
 
 ax.plot(
     np.asarray([-1, 3.5]),
