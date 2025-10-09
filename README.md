@@ -28,13 +28,15 @@ It is essential to install `ipfsspec` using pip, the version provided via `conda
 
 The python environment for this repo was build using [uv](https://astral.sh/blog/uv). All dependencies  can be found in the `pyproject.toml`, in case you want to build your own environment.
 
-Although most of the (plotting) scripts can be run with this environment, there are a few special cases that are described below.
-=======
+## Re-creating data based on other packages
 
+Although most of the (plotting) scripts can be run with the above-specified environment, there are a few special cases where plots require data or calculations that depend on packages not included in the environment.  The use of these is described below.
 
-### Using PAMTRA for the sondes
+### Microwave temperature estimates with PAMTRA
 
-To use the pamtra model, it has to be installed separately from the uv environment. On levante, the following steps suffice to do that, if run from within the repo.
+To recreate the microwave temperature estimates we use PAMTRA with input data from the various sounding datasets through the python scripting provided in this repo.   Below we provide instructions for setting up PAMTRA on a Mac and on the DKRZ machine Levante (linux with intel).  This and the [PAMTRA documentation](https://pamtra.readthedocs.io/en/latest/installation.html) should provide guidance for implementing on other systems.
+
+Using Levante (linux, intel)
 
 ```
 module load git
@@ -46,7 +48,8 @@ spack load /tpmfvwu # openblas
 CC=gcc uv run pip install git+https://github.com/igmk/pamtra
 ``` 
 
-On a MAC, 
+Using a Mac (ARM)
+
 ```
 brew install openblas pkgconf netcdf fftw gcc@14
 export PKG_CONFIG_PATH="/opt/homebrew/opt/openblas/lib/pkgconfig"
@@ -54,11 +57,9 @@ CC=gcc-14 uv run pip install git+https://github.com/igmk/pamtra
 ```
 Other gcc versions can also be used, however, they apparently have to be smaller than 15. 
 
-### Running konrad
+### RCE calculations with Konrad
 
-Konrad relies on the CliMT package, which unfortunately is no longer maintained.
-Consequently, installation with `uv` is not possible right away.
-However, the following workaround should install Konrad and CliMT to the virtual environment:
+To re-create the RCE calculations requires running Konrad. Konrad relies on the CliMT package, which unfortunately is no longer maintained. Consequently, installation with `uv` is not possible right away. However, the following workaround should install Konrad and CliMT to the virtual environment:
 
 ```
 # Activate the `uv` environment directly
@@ -82,10 +83,15 @@ python3 -m pip install konrad
 It should then be possible to run `uv run gate_vs_orcestra/rce_simulation.py`.
 
 
-### Re-Creating the high Level radiosonde datasets
+### High Level radiosonde datasets with Pydropsonde
 
 For consistency, the GATE Level 1 files as well as the RAPSODI Level 1 data are processed with [pydropsonde (version >= 0.5.1)](https://github.com/atmdrops/pydropsonde). To use this processing tool  entering: 
 ```
 uv add pydropsonde
 ```
 should be sufficient to run the `pydropsonde4gate.py` and the `reprocess_rapsodi.py` scripts to reproduce the data used in this repo.
+
+If you would like to recreate the GATE Leve 1 data from the tar-archives.   The Fortran code for doing so is provided and described through a separate `README.md` in the `gate_processing` folder
+
+
+### Radiant energy fluxes with RRTMG
