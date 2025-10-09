@@ -8,7 +8,7 @@ The ORCESTRA campaign is described on [this website](https://orcestra-campaign.o
 Kuettner, J. P.: General description and central program of GATE, Bulletin of the
 American Meteorological Society, 55, 526–530, 1974.
 
-### Accessing the Data
+### Accessing the Data on IPFS
 
 Most of the scripts in this repo use data that is puplicly available on [IPFS](https://docs.ipfs.tech/concepts/what-is-ipfs/). To obtain data from the IPFS network, you need access to an [IPFS Gateway](https://docs.ipfs.tech/concepts/ipfs-gateway).
 
@@ -23,6 +23,15 @@ export IPFS_GATEWAY=https://ipfs.io
 
 To then access the data using Python, you will need to install the [`ipfsspec>=0.6.0`](http://pypi.org/project/ipfsspec/) package.
 It is essential to install `ipfsspec` using pip, the version provided via `conda-forge` is outdated and **broken**.
+
+### Accessing additional data
+
+#### Berkeley Earth sea surface temperature
+
+The subselected [Berkeley Earth Surface Temperature data](https://berkeleyearth.org) that we used can be found in the `data` folder. The original data is provided on the linked website. 
+
+#### PIRATA buoy data
+The [PIRATA buoy data](https://www.pmel.noaa.gov/gtmba/pmel-theme/atlantic-ocean-pirata) can be found in the data folder. 
 
 ### Running the scripts in this repo
 
