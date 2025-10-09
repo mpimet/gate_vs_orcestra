@@ -185,3 +185,7 @@ fig.savefig("gate_vs_orcestra_rce.png")
 
 
 print_changes(gate, orcestra)
+# %%
+
+fig, ax = plot_comparison(gate, orcestra)
+ax.plot([-1, -2.5], [21, 23], color="red", lw=2, ls="-", zorder=10)
