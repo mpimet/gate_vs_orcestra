@@ -95,3 +95,5 @@ If you would like to recreate the GATE Leve 1 data from the tar-archives.   The 
 
 
 ### Radiant energy fluxes with RRTMG
+
+Calculations were performed with EcRad which can be downloaded and installed from the its [github repo](https://github.com/ecmwf-ifs/ecrad), which also provides usage isntructions.  Trace gas concentrations used in the input are taken from the reanlaysis as distributed by the Copernicus Climate Change Services.
