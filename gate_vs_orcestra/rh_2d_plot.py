@@ -291,7 +291,7 @@ orc_cmap = sns.light_palette("cornflowerblue", as_cmap=True)
 fig, axes = plt.subplot_mosaic(
     [["top", "top"], ["left", "right"]],
     figsize=(cw, cw * 0.75),
-    height_ratios=[0.3, 0.8],
+    height_ratios=[0.25, 0.8],
 )
 
 for ax in [axes["left"], axes["right"]]:
@@ -455,7 +455,7 @@ ax.annotate(
     fontsize=8,
     ha="center",
     va="bottom",
-    arrowprops=dict(arrowstyle="-[, widthB=4.7, lengthB=.1", lw=2.0),
+    arrowprops=dict(arrowstyle="-[, widthB=5.5, lengthB=.1", lw=2.0),
 )
 
 ax.annotate(
@@ -466,11 +466,12 @@ ax.annotate(
     ha="center",
     va="bottom",
     alpha=0.5,
-    arrowprops=dict(arrowstyle="-[, widthB=4, lengthB=.1", lw=2.0, color="gray"),
+    arrowprops=dict(arrowstyle="-[, widthB=4.5, lengthB=.1", lw=2.0, color="gray"),
 )
 ax.set_ylim(0, 0.218)
 ax.legend(fontsize=8)
 ax.set_yticks(ticks=np.arange(0, 0.2, 0.08))
+ax.set_xlabel("IWV / kg m$^{-2}$")
 ax.spines["left"].set_bounds(-0.0, 0.19)
 
 ax.set_ylabel("prob. density")
@@ -483,6 +484,7 @@ ax.set_xticks(
 )
 
 sns.despine(offset={"bottom": 10})
+fig.tight_layout()
 fig.savefig(
     "plots/rh_histograms.pdf",
     bbox_inches="tight",
