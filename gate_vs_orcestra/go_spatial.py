@@ -129,7 +129,7 @@ gl.right_labels = False
 gl.xlocator = mticker.FixedLocator([])
 gl.ylocator = mticker.FixedLocator([])
 
-ax.set_xlabel("longitude / $^\\circ$W")
+ax.set_xlabel("longitude / $^\\circ$E")
 ax.set_ylabel("latitude / $^\\circ$N")
 
 ax.plot(
@@ -235,7 +235,7 @@ ax.legend(
 xticks = [-34, -27.0, -23.5, -20]
 yticks = [4.5, 8.5, 12.5]
 ax.set_xticks(xticks)
-ax.set_xlabel("longitude / $^\\circ$W")
+ax.set_xlabel("longitude / $^\\circ$E")
 ax.set_yticks(yticks)
 ax.set_ylabel("latitude / $^\\circ$N")
 
