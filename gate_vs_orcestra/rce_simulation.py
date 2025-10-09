@@ -1,3 +1,4 @@
+# %%
 import tempfile
 
 import konrad
@@ -169,14 +170,14 @@ def print_changes(gate, orcestra):
 
 # GATE
 gate_co2 = 303.5e-6
-gate = run_rce(co2=gate_co2, o3="gate", sst=300.0)
+gate = run_rce(co2=gate_co2, o3="gate", sst=299.1)  # 300
 
 # ORCESTRA
 orcestra_co2 = 422.8e-6
 orcestra_co2_e = (
     np.exp(1.5 * np.log(orcestra_co2 / gate_co2)) * gate_co2
 )  # CO2 equivalent forcing
-orcestra = run_rce(co2=orcestra_co2_e, o3="orcestra", sst=301.3)
+orcestra = run_rce(co2=orcestra_co2_e, o3="orcestra", sst=300.4)  # 301.3
 
 
 fig, ax = plot_comparison(gate, orcestra)
