@@ -28,6 +28,19 @@ It is essential to install `ipfsspec` using pip, the version provided via `conda
 
 The python environment for this repo was build using [uv](https://astral.sh/blog/uv). All dependencies  can be found in the `pyproject.toml`, in case you want to build your own environment.
 
+The plots, tables, and calculations in the corresponding paperdraft can be found in the following scripts:
+| Figure/Table   | short description | script |
+| -------- | ------- | ------- | 
+| Fig 1 | map with sonde position | `go_spatial.py`    |
+| Tab 1 | sonde mean positions and times | `go_spatial.py` |
+| Fig 2 | thermodynamic structure | `compare_soundings.py` |
+| Fig 3 | $\Delta T$ |  `compare_soundings.py` |
+| Fig 4 | relative humidity | `rh_2d_plot.py` | 
+| Tab 2 | heights ($z_0, z_\text{ct}, z_\text{cp}$) | `compare_soundings.py` |
+| Fig 5 | surface temperature  | `pirata_analysis_gate_domain.py` | 
+| | 1D RCE konrad | `rce_simulation.py` |
+| | PAMTRA calculations | `passive-microwave-halo.py` | 
+
 ## Re-creating data based on other packages
 
 Although most of the (plotting) scripts can be run with the above-specified environment, there are a few special cases where plots require data or calculations that depend on packages not included in the environment.  The use of these is described below.
