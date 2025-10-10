@@ -33,6 +33,14 @@ The subselected [Berkeley Earth Surface Temperature data](https://berkeleyearth.
 #### PIRATA buoy data
 The [PIRATA buoy data](https://www.pmel.noaa.gov/gtmba/pmel-theme/atlantic-ocean-pirata) can be found in the data folder. 
 
+#### Primary GATE data
+
+The primary data, in the form of original tar files with the encoded data archive have been redistributed using IPFS via the CID 
+```
+QmP84Nnaf8vMEUrp8Sr2sm3Xm8xxwfkFgtuGE69uUAwYau
+````
+This data allows users to recreate our reprocessing using the scripts and fortran code in this repository.  The data is the same as would be procurred from NOAA but avoids processing fees.  Our redistribution is authorized by NOAA.
+
 ### Running the scripts in this repo
 
 The python environment for this repo was build using [uv](https://astral.sh/blog/uv). All dependencies  can be found in the `pyproject.toml`, in case you want to build your own environment.
