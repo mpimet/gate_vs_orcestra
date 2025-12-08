@@ -40,20 +40,14 @@ for P in [85000,50000]:
     hgts.append(Z.mean().values)
 dz = hgts[1]-hgts[0]
 #%%
+# - construct variables
 ds = datasets["orcestra"]
 
 mse = mtf.make_static_energy((mtc.lv0 + mtc.cl *mtc.T0))
 es = svp.liq_murphy_koop  
 qs = mtf.partial_pressure_to_specific_humidity(es(ds.ta),ds.p)
 
-def mse_simple(T,Z,q):
-    cp = mtc.cpd + (mtc.cl-mtc.cpd)*q
-    a  = cp*T + Z*mtc.gravity_earth + mtf.vaporization_enthalpy(T)*q
-    b  = mtc.cpd*T + Z*mtc.gravity_earth + mtc.lv0*q
-    return a
-
 hs_exact  = mse(ds.ta,ds.altitude,qs)
-hs_simple = mse_simple(ds.ta,ds.altitude,qs)
 
 hs = hs_exact
 dhs = hs.sel(altitude=5777, method='nearest') - hs.sel(altitude=1517, method='nearest')
@@ -63,14 +57,14 @@ x = -dhs/dqs/mtc.lv0/dz*1000.
 
 sns.set_context("paper")
 fig, ax = plt.subplots(1, 1, figsize=(hcw, hcw))
-x.plot.hist(ax=ax,bins=100,range=(-0.1,2.1))
+x.plot.hist(ax=ax,bins=30,range=(-0.1,2.1))
 plt.xlabel('$\\varepsilon$ / km$^{-1}$')
 plt.ylabel('Frequency')
 sns.despine(offset=10)
 plt.show()
 
 #%%
-# plot 2D histogram
+# - plot 2D histogram
 eps = 0.5e-3
 heps = np.arange(-20,-3,0.1)
 qeps = -heps/dz/eps
