@@ -51,13 +51,12 @@ mse = mtf.make_static_energy((mtc.lv0 + mtc.cl * mtc.T0))
 es = svp.liq_murphy_koop
 qs = mtf.partial_pressure_to_specific_humidity(es(ds.ta), ds.p)
 
-hs_exact = mse(ds.ta, ds.altitude, qs)
-
-hs = hs_exact
-dhs = hs.sel(altitude=5777, method="nearest") - hs.sel(altitude=1517, method="nearest")
+hs = mse(ds.ta, ds.altitude, qs)
+dhs = hs.sel(altitude=hgts[1], method="nearest") - hs.sel(
+    altitude=hgts[0], method="nearest"
+)
 dqs = (qs - ds.q).sel(altitude=slice(hgts[0], hgts[1])).mean(dim="altitude")
 x = -dhs / dqs / mtc.lv0 / dz * 1000.0
-
 
 sns.set_context("paper")
 fig, ax = plt.subplots(1, 1, figsize=(hcw, hcw))
@@ -75,9 +74,11 @@ qeps = -heps / dz / eps
 
 sns.set_context("paper")
 fig, ax = plt.subplots(1, 1, figsize=(hcw, hcw))
-sns.kdeplot(
-    ax=ax, x=dqs * mtc.lv0 / 1000, y=dhs / 1000, levels=7, cmap="Blues", cbar=False
-)
+# sns.kdeplot(
+#    ax=ax, x=dqs * mtc.lv0 / 1000, y=dhs / 1000, levels=7, cmap="Blues", cbar=False
+# )
+sns.histplot(ax=ax, x=dqs * mtc.lv0 / 1000, y=dhs / 1000, cmap="Blues", cbar=False)
+
 plt.plot(qeps, heps, label=f"$\\varepsilon = {eps * 1000}$ km $^{{-1}}$")
 ax.set_xlabel(
     "$\\frac{\\ell_\\mathrm{v}}{\\Delta z} \\int (q_\\mathrm{s} - q)\\, \\mathrm{d}z$ /  kJkg$^{-1}$"
