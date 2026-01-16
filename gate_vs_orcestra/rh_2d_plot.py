@@ -22,7 +22,10 @@ datasets = {
 
 for name, ds in datasets.items():
     datasets[name] = (
-        ds.pipe(pp.interpolate_gaps).pipe(pp.extrapolate_sfc).pipe(pp.sel_percusion_E)
+        ds.pipe(pp.interpolate_gaps)
+        .pipe(pp.extrapolate_sfc)
+        .pipe(pp.sel_percusion_E)
+        .pipe(pp.sel_itcz)
     )
 # %%
 datasets["orcestra"] = xr.concat(
@@ -162,8 +165,8 @@ for name, ds in iwv.items():
 # %%
 P = np.arange(100900.0, 4000.0, -500)
 
-orc_sfc = iwv["orcestra"].sel(altitude=0).mean("sonde")
-gate_sfc = iwv["gate"].sel(altitude=0).mean("sonde")
+orc_sfc = iwv["orcestra"].sel(altitude=slice(0, 50)).mean()
+gate_sfc = iwv["gate"].sel(altitude=slice(0, 50)).mean()
 
 orc_pseudo = thermo.make_sounding_from_adiabat(
     P, orc_sfc.ta.values, orc_sfc.q.values, thx=mtf.theta_e_bolton
@@ -284,6 +287,168 @@ sns.despine()
 # %%
 cw = 190 / 25.4
 sns.set_context("paper")
+
+fig, axes = plt.subplots(ncols=2, figsize=(cw, cw / 2), width_ratios=[0.6, 0.45])
+
+for name, label in [
+    #    ("rapsodi", "ORCESTRA-RS"),
+    #   ("beach", "ORCESTRA-DS"),
+    ("gate", "GATE"),
+    ("orcestra", "ORCESTRA"),
+]:
+    sns.histplot(
+        data=iwv[name].iwv,
+        bins=40,
+        binrange=(32, 73),
+        element="step",
+        stat="density",
+        label=label,
+        color=colors[name],
+        ax=axes[0],
+    )
+print("orcestra median", iwv["orcestra"].iwv.median().values)
+print("gate median", iwv["gate"].iwv.median().values)
+axes[0].axvline(
+    x=iwv["orcestra"].iwv.median(),
+    ymax=0.8,
+    color=colors["orcestra"],
+    linestyle="-",
+    linewidth=2,
+    alpha=0.5,
+)
+axes[0].text(
+    x=iwv["orcestra"].iwv.median() + 0.5,
+    y=0.12,
+    fontsize=8,
+    s="ORC",
+    color=colors["orcestra"],
+    ha="left",
+    va="top",
+    rotation=90,
+)
+
+axes[0].axvline(
+    x=iwv["gate"].iwv.median(),
+    ymax=0.8,
+    color=colors["gate"],
+    linestyle="-",
+    alpha=0.5,
+)
+axes[0].text(
+    x=iwv["gate"].iwv.median(),
+    y=0.12,
+    fontsize=8,
+    s="GATE",
+    color=colors["gate"],
+    ha="right",
+    va="top",
+    rotation=90,
+)
+axes[0].set_ylim(None, 0.15)
+
+
+axes[0].axvline(orc_pseudo.iwv, ymax=0.8, color=colors["orcestra"], linestyle="--")
+
+axes[0].axvline(gate_pseudo.iwv, ymax=0.8, color=colors["gate"], linestyle="--")
+
+print("orcestra pseudo", orc_pseudo.iwv.values)
+print("gate pseudo", gate_pseudo.iwv.values)
+
+mean_pseudo = (orc_pseudo.iwv + gate_pseudo.iwv).values / 2
+diff_pseudo = (orc_pseudo.iwv - gate_pseudo.iwv).values
+
+mean_campaigns = (iwv["orcestra"].iwv.median() + iwv["gate"].iwv.median()).values / 2
+diff_campaigns = iwv["orcestra"].iwv.median() - iwv["gate"].iwv.median()
+
+axes[0].annotate(
+    "{:.2f}".format(diff_pseudo),
+    xy=(mean_pseudo, 0.123),
+    xytext=(mean_pseudo, 0.128),
+    fontsize=8,
+    ha="center",
+    va="bottom",
+    arrowprops=dict(arrowstyle="-[, widthB=2.5, lengthB=.1", lw=2.0),
+)
+
+axes[0].annotate(
+    "{:.2f}".format(diff_campaigns),
+    xy=(mean_campaigns, 0.134),
+    xytext=(mean_campaigns, 0.139),
+    fontsize=8,
+    ha="center",
+    va="bottom",
+    alpha=0.5,
+    arrowprops=dict(arrowstyle="-[, widthB=2.6, lengthB=.1", lw=2.0, color="gray"),
+)
+
+axes[0].set_xlabel("IWV / kg m$^{-2}$")
+
+# RH
+for name in ["orcestra", "gate"]:
+    ta_datasets[name].mean("sonde").rh.plot(
+        label=name.upper(),
+        y="ta",
+        color=colors[name],
+        linewidth=2,
+        ax=axes[1],
+    )
+    axes[1].fill_betweenx(
+        ta_datasets[name].ta,
+        ta_datasets[name].rh.quantile(0.1, dim="sonde"),
+        ta_datasets[name].rh.quantile(0.9, dim="sonde"),
+        alpha=0.1,
+        color=colors[name],
+    )
+
+axes[1].invert_yaxis()
+axes[1].legend(loc="upper right")
+axes[1].set_ylabel("$T$ / K")
+axes[1].set_xlabel("RH / 1")
+axes[1].axhline(273.15, color="k", linestyle="--")
+axes[1].plot(
+    ice_line.values,
+    datasets["orcestra"].ta.mean("sonde"),
+    color="black",
+)
+bbox_args = dict(boxstyle="round", fc="white", alpha=0.3)
+axes[1].annotate(
+    r"RH$_{\text{ice}} = 1$",
+    xy=(1.1, 250),
+    xycoords="data",
+    fontsize=7,
+    ha="right",
+    va="top",
+    bbox=bbox_args,
+)
+axes[1].plot(
+    fix_q_rh_low.values,
+    ta_datasets["orcestra"].ta,
+    color="black",
+    linestyle="-",
+)
+axes[1].annotate(
+    "q = {:.4f}".format(q_low),
+    xy=(1.1, 303),
+    xycoords="data",
+    fontsize=7,
+    ha="right",
+    va="top",
+    bbox=bbox_args,
+)
+axes[1].set_ylim(305, 220)
+axes[1].set_yticks(
+    [305, 295, 285, 273.15, 265, 255, 245, 235, 225],
+    labels=["305", "295", "285", "273.15", "265", "255", "245", "235", "225"],
+)
+axes[1].set_xlim(0, 1.1)
+
+sns.despine(ax=axes[1], offset={"bottom": 10})
+sns.despine(ax=axes[0], offset=10)
+fig.tight_layout()
+fig.savefig("iwv_rh_6to11.pdf", bbox_inches="tight")
+# %%
+cw = 190 / 25.4
+sns.set_context("paper")
 cs_threshold = 0.95
 gate_cmap = sns.light_palette(colors["gate"], as_cmap=True)
 orc_cmap = sns.light_palette("cornflowerblue", as_cmap=True)
@@ -397,21 +562,21 @@ for name, label in [
 
 print("orcestra median", iwv["orcestra"].iwv.median().values)
 print("gate median", iwv["gate"].iwv.median().values)
-
+ref = "orcestra"
 ax.axvline(
-    x=iwv["orcestra"].iwv.median(),
+    x=iwv[ref].iwv.median(),
     ymax=0.91,
-    color=colors["orcestra"],
+    color=colors[ref],
     linestyle="-",
     linewidth=2,
     alpha=0.5,
 )
 ax.text(
-    x=iwv["orcestra"].iwv.median() + 0.2,
+    x=iwv[ref].iwv.median() + 0.2,
     y=0.2,
     fontsize=8,
     s="ORC",
-    color=colors["orcestra"],
+    color=colors[ref],
     ha="left",
     va="top",
     rotation=90,
@@ -445,8 +610,8 @@ print("gate pseudo", gate_pseudo.iwv.values)
 mean_pseudo = (orc_pseudo.iwv + gate_pseudo.iwv).values / 2
 diff_pseudo = (orc_pseudo.iwv - gate_pseudo.iwv).values
 
-mean_campaigns = (iwv["orcestra"].iwv.median() + iwv["gate"].iwv.median()).values / 2
-diff_campaigns = iwv["orcestra"].iwv.median() - iwv["gate"].iwv.median()
+mean_campaigns = (iwv[ref].iwv.median() + iwv["gate"].iwv.median()).values / 2
+diff_campaigns = iwv[ref].iwv.median() - iwv["gate"].iwv.median()
 
 ax.annotate(
     "{:.2f}".format(diff_pseudo),
@@ -479,16 +644,18 @@ ax.set_xticks(
     [
         40.0,
         np.round(iwv["gate"].iwv.median(), 1),
-        np.round(iwv["orcestra"].iwv.median(), 1),
+        np.round(iwv[ref].iwv.median(), 1),
     ]
 )
 
 sns.despine(offset={"bottom": 10})
 fig.tight_layout()
+# %%
 fig.savefig(
     "plots/rh_histograms.pdf",
     bbox_inches="tight",
 )
+
 
 # %%
 pltcolors = sns.color_palette("Paired", n_colors=8)
@@ -496,16 +663,23 @@ cs_threshold = 0.98
 cw = 190 / 25.4
 fig, ax = plt.subplots(figsize=(cw / 2, cw / 2))
 
-for name, color_idx in [("orcestra", 0), ("gate", 4)]:
+for name in ["beach", "gate", "rapsodi", "orcestra"]:
     ds = ta_datasets[name].rh
-    ds.where(ds.max(dim="ta") < cs_threshold).mean("sonde").rolling(ta=5).mean().plot(
-        y="ta",
-        ax=ax,
-        label=f"{name} rh$_\\mathrm{{max}}$ < {cs_threshold:.2f}",
-        c=pltcolors[color_idx],
+    ds = ds.where(
+        (datasets[name].launch_lat > 6) & (datasets[name].launch_lat < 11), drop=True
     )
+    print(ds.sizes)
     ds.mean("sonde").rolling(ta=5).mean().plot(
-        label=name, y="ta", ax=ax, c=pltcolors[color_idx + 1]
+        label=name, y="ta", ax=ax, c=colors[name]
+    )
+    # for name in ["orcestra", "gate"]:
+    ds = ta_datasets[name].rh
+    ax.fill_betweenx(
+        ds.ta,
+        ds.quantile(0.1, dim="sonde").rolling(ta=5).mean(),
+        ds.quantile(0.9, dim="sonde").rolling(ta=5).mean(),
+        alpha=0.1,
+        color=colors[name],
     )
 
 
@@ -515,7 +689,6 @@ ax.set_xlabel("RH / 1")
 ax.set_ylabel("$T$ / K")
 sns.despine(offset=10)
 fig.savefig(
-    "plots/total_vs_clear_sky.pdf",
+    "plots/rh_mean.pdf",
 )
-
 # %%
