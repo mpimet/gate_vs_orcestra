@@ -562,7 +562,7 @@ for name, label in [
 
 print("orcestra median", iwv["orcestra"].iwv.median().values)
 print("gate median", iwv["gate"].iwv.median().values)
-ref = "orcestra" 
+ref = "orcestra"
 ax.axvline(
     x=iwv[ref].iwv.median(),
     ymax=0.91,
@@ -644,16 +644,18 @@ ax.set_xticks(
     [
         40.0,
         np.round(iwv["gate"].iwv.median(), 1),
-        np.round(iwv["orcestra"].iwv.median(), 1),
+        np.round(iwv[ref].iwv.median(), 1),
     ]
 )
 
 sns.despine(offset={"bottom": 10})
 fig.tight_layout()
+# %%
 fig.savefig(
     "plots/rh_histograms.pdf",
     bbox_inches="tight",
 )
+
 
 # %%
 pltcolors = sns.color_palette("Paired", n_colors=8)
@@ -661,16 +663,23 @@ cs_threshold = 0.98
 cw = 190 / 25.4
 fig, ax = plt.subplots(figsize=(cw / 2, cw / 2))
 
-for name, color_idx in [("orcestra", 0), ("gate", 4)]:
+for name in ["beach", "gate", "rapsodi", "orcestra"]:
     ds = ta_datasets[name].rh
-    ds.where(ds.max(dim="ta") < cs_threshold).mean("sonde").rolling(ta=5).mean().plot(
-        y="ta",
-        ax=ax,
-        label=f"{name} rh$_\\mathrm{{max}}$ < {cs_threshold:.2f}",
-        c=pltcolors[color_idx],
+    ds = ds.where(
+        (datasets[name].launch_lat > 6) & (datasets[name].launch_lat < 11), drop=True
     )
+    print(ds.sizes)
     ds.mean("sonde").rolling(ta=5).mean().plot(
-        label=name, y="ta", ax=ax, c=pltcolors[color_idx + 1]
+        label=name, y="ta", ax=ax, c=colors[name]
+    )
+    # for name in ["orcestra", "gate"]:
+    ds = ta_datasets[name].rh
+    ax.fill_betweenx(
+        ds.ta,
+        ds.quantile(0.1, dim="sonde").rolling(ta=5).mean(),
+        ds.quantile(0.9, dim="sonde").rolling(ta=5).mean(),
+        alpha=0.1,
+        color=colors[name],
     )
 
 
@@ -680,7 +689,6 @@ ax.set_xlabel("RH / 1")
 ax.set_ylabel("$T$ / K")
 sns.despine(offset=10)
 fig.savefig(
-    "plots/total_vs_clear_sky.pdf",
+    "plots/rh_mean.pdf",
 )
-
 # %%
