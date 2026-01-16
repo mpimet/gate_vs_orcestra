@@ -22,7 +22,10 @@ datasets = {
 
 for name, ds in datasets.items():
     datasets[name] = (
-        ds.pipe(pp.interpolate_gaps).pipe(pp.extrapolate_sfc).pipe(pp.sel_percusion_E)
+        ds.pipe(pp.interpolate_gaps)
+        .pipe(pp.extrapolate_sfc)
+        .pipe(pp.sel_percusion_E)
+        .pipe(pp.sel_itcz)
     )
 # %%
 datasets["orcestra"] = xr.concat(
@@ -162,8 +165,8 @@ for name, ds in iwv.items():
 # %%
 P = np.arange(100900.0, 4000.0, -500)
 
-orc_sfc = iwv["orcestra"].sel(altitude=0).mean("sonde")
-gate_sfc = iwv["gate"].sel(altitude=0).mean("sonde")
+orc_sfc = iwv["orcestra"].sel(altitude=slice(0, 50)).mean()
+gate_sfc = iwv["gate"].sel(altitude=slice(0, 50)).mean()
 
 orc_pseudo = thermo.make_sounding_from_adiabat(
     P, orc_sfc.ta.values, orc_sfc.q.values, thx=mtf.theta_e_bolton
