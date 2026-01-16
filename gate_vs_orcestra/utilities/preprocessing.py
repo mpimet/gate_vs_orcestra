@@ -2,7 +2,7 @@ import os
 import numpy as np
 import xarray as xr
 from matplotlib.path import Path
-from utilities.settings_and_colors import gate_A, percusion_E
+from utilities.settings_and_colors import gate_A, percusion_E, itcz
 import moist_thermodynamics.functions as mt
 import utilities.data_utils as data
 import easygems.healpix as egh
@@ -31,6 +31,14 @@ def sel_percusion_E(ds, **kwargs):
     select points from dataset that lie within the percusion_E polygon
     """
     return sel_sub_domain(ds, percusion_E, **kwargs)
+
+
+def sel_itcz(ds, **kwargs):
+    return sel_sub_domain(
+        ds,
+        itcz,
+        **kwargs,
+    )
 
 
 def interpolate_gaps(ds):
