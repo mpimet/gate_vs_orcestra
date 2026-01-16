@@ -562,21 +562,21 @@ for name, label in [
 
 print("orcestra median", iwv["orcestra"].iwv.median().values)
 print("gate median", iwv["gate"].iwv.median().values)
-
+ref = "orcestra" 
 ax.axvline(
-    x=iwv["orcestra"].iwv.median(),
+    x=iwv[ref].iwv.median(),
     ymax=0.91,
-    color=colors["orcestra"],
+    color=colors[ref],
     linestyle="-",
     linewidth=2,
     alpha=0.5,
 )
 ax.text(
-    x=iwv["orcestra"].iwv.median() + 0.2,
+    x=iwv[ref].iwv.median() + 0.2,
     y=0.2,
     fontsize=8,
     s="ORC",
-    color=colors["orcestra"],
+    color=colors[ref],
     ha="left",
     va="top",
     rotation=90,
@@ -610,8 +610,8 @@ print("gate pseudo", gate_pseudo.iwv.values)
 mean_pseudo = (orc_pseudo.iwv + gate_pseudo.iwv).values / 2
 diff_pseudo = (orc_pseudo.iwv - gate_pseudo.iwv).values
 
-mean_campaigns = (iwv["orcestra"].iwv.median() + iwv["gate"].iwv.median()).values / 2
-diff_campaigns = iwv["orcestra"].iwv.median() - iwv["gate"].iwv.median()
+mean_campaigns = (iwv[ref].iwv.median() + iwv["gate"].iwv.median()).values / 2
+diff_campaigns = iwv[ref].iwv.median() - iwv["gate"].iwv.median()
 
 ax.annotate(
     "{:.2f}".format(diff_pseudo),
