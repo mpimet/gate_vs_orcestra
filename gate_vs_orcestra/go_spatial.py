@@ -10,7 +10,7 @@ import cartopy.feature as cfeature
 
 import utilities.data_utils as dus
 import utilities.preprocessing as dpp
-from utilities.settings_and_colors import colors, gate_A, percusion_E
+from utilities.settings_and_colors import colors, gate_A, percusion_E, itcz
 
 # %%
 # - load gate sounding data
@@ -138,6 +138,8 @@ ax.plot(
 ax.plot(gate_A[3:, 0], gate_A[3:, 1], color="k", lw=1, ls="solid")
 ax.plot(percusion_E[:2, 0], percusion_E[:2, 1], color="k", lw=1, ls="solid")
 ax.plot(percusion_E[2:, 0], percusion_E[2:, 1], color="k", lw=1, ls="solid")
+ax.plot(itcz[:2, 0], itcz[:2, 1], color="k", lw=1, ls="dotted")
+ax.plot(itcz[2:, 0], itcz[2:, 1], color="k", lw=1, ls="dotted")
 
 h_g1 = mlines.Line2D(
     [],
@@ -217,7 +219,7 @@ h_p2 = mlines.Line2D(
     color=colors["pirata4"],
     marker="*",
     linestyle="None",
-    markersize=4,
+    markersize=5,
     alpha=1,
     label="PIRATA (-23˚E, 4˚N)",
 )
@@ -232,7 +234,7 @@ ax.legend(
     fontsize=8,
 )
 
-xticks = [-34, -27.0, -23.5, -20]
+xticks = [-34, -27.0, -20]
 yticks = [4.5, 8.5, 12.5]
 ax.set_xticks(xticks)
 ax.set_xlabel("longitude / $^\\circ$E")
@@ -243,7 +245,7 @@ for xlat in [12]:
     ax.scatter(
         [-23],
         [xlat],
-        s=5,
+        s=35,
         edgecolors=colors["pirata" + str(xlat)],
         facecolors=colors["pirata" + str(xlat)],
         linewidth=1.0,
@@ -269,8 +271,27 @@ ax.annotate(
     arrowprops=dict(arrowstyle="->", color="k"),
 )
 
+ax.annotate(
+    "R/V Meteor (1974)",
+    xy=(-22.3467, 8.4692),
+    xytext=(-18.5, 5.5),
+    fontsize=8,
+    color="k",
+    arrowprops=dict(arrowstyle="->", color="k"),
+)
+
+ax.annotate(
+    "PIRATA 12˚N",
+    xy=(-23.0, 12.0),
+    xytext=(-21.5, 13.5),
+    fontsize=8,
+    color="k",
+    arrowprops=dict(arrowstyle="->", color="k"),
+)
+
 ax.annotate("GATE A/B array", xy=(-20.3, 9.55), fontsize=8)
-ax.annotate("ORCESTRA East", xy=(-35.5, 11.5), fontsize=8)
+ax.annotate("ORCESTRA East", xy=(-35.5, 12.8), fontsize=8)
+ax.annotate("Inner ITCZ", xy=(-30.5, 10.2), fontsize=8)
 fig.tight_layout()
 plt.savefig("plots/gate-orcestra-sondes.pdf")
 
