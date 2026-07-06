@@ -8,7 +8,9 @@ import matplotlib.ticker as mticker
 import utilities.data_utils as dus
 from utilities.settings_and_colors import colors
 import utilities.preprocessing as pp
-
+import warnings
+import statsmodels.api as sm
+from scipy.stats import t
 # %%
 # - Loading and reformatting the data
 
@@ -46,6 +48,41 @@ for campaign, ds in ships.items():
 Tfld = "sst"
 ship_data["orcestra"]["year"] = 2024
 ship_data["gate"]["year"] = 1974
+# %%
+
+
+def linear_trend(da, calc_cierr=True, alpha=0.975, nlags=25, only_slope=True):
+    Ndet = da
+    if np.any(np.isnan(Ndet.values)):
+        warnings.warn(
+            "NaN values found in data - probably not covering the full period, dropping NaN values for linear regression.\n"
+        )
+        Ndet = Ndet.dropna("year")
+    reg = linregress(Ndet.year, Ndet.values)
+    if calc_cierr:
+        ei = Ndet - reg.intercept - reg.slope * Ndet.year
+        n = Ndet.sizes["year"]
+        autocorr = sm.tsa.acf(ei, nlags=nlags)
+        sigmak = np.sqrt(1 / n * (1 + 2 * np.cumsum(autocorr[1:] ** 2)))
+        cik = sigmak * [t.ppf(0.8, n - k) for k in range(1, len(sigmak) + 1)]
+        maxauto = np.argmax((autocorr[:-1] < 0) & ((autocorr[1:] + autocorr[:-1]) < 0))
+        if maxauto == 0:
+            print("autocorrelation is positive at all lags, increase number of lags!")
+        if np.any(autocorr[1:] > cik):
+            Neff = n / (1 + 2 * np.sum(np.abs(autocorr[1:maxauto])))
+        else:
+            print("no significant autocorrelation, using n for effective sample size")
+            Neff = n
+        se = np.sqrt(np.sum(ei**2) / (Neff - 2))
+        sb = se / np.sqrt(np.sum((Ndet.year - Ndet.year.mean()) ** 2))
+        tstat = t.ppf(alpha, Neff - 2)
+        if only_slope:
+            return reg.slope, tstat * sb
+        else:
+            return reg, tstat * sb
+    else:
+        return reg
+
 
 # %%
 # - Paper Figure
@@ -127,11 +164,8 @@ for sel_lat in [
     residuals_dict[sel_lat] = values - fit_line
 
 year_slice = slice(1974, None)
-
-slope, intercept, r_value, _, _ = linregress(
-    best.year.sel(year=year_slice).values,
-    best.sel(year=year_slice).values,
-)
+reg, err = linear_trend(best.sel(year=year_slice), only_slope=False)
+slope, intercept, r_value, _, _ = reg
 fit_line = slope * years + intercept
 r_squared = r_value**2
 
@@ -147,14 +181,15 @@ ax[0].plot(
 )
 
 year_slice = slice(2006, None)
-slope, intercept, r_value, _, _ = linregress(
-    best.year.sel(year=year_slice).values,
-    best.sel(year=year_slice).values,
+(slope, intercept, r_value, _, _), err = linear_trend(
+    best.sel(year=year_slice),
+    only_slope=False,
 )
 
-print(f"slope for {year_slice}: {slope}")
-slope, intercept, r_value, _, _ = linregress(best.year.values, best.values)
-print("slope whole period", slope)
+print(f"slope for {year_slice}: {slope} +/- {err.values}")
+(slope, intercept, r_value, _, _), err = linear_trend(best, only_slope=False)
+
+print("slope whole period", slope, "+/-", err.values)
 rean_resid = best - (slope * best.year.values + intercept)
 print(rean_resid.std().values)
 
