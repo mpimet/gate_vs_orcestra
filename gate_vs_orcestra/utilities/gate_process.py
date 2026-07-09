@@ -1,5 +1,6 @@
 import xarray as xr
 import numpy as np
+from scipy.stats import norm
 import moist_thermodynamics.functions as mtf
 import moist_thermodynamics.saturation_vapor_pressures as svp
 
@@ -42,6 +43,28 @@ def mask_unphysical(ds):
         ds = ds.assign({"rh": ds["rh"].where(good_sondes | outside_error_region)})
 
     return ds
+
+
+def add_n2(ds):
+    return ds.assign(
+        n2=xr.apply_ufunc(
+            mtf.brunt_vaisala_frequency,
+            ds.theta,
+            ds.q,
+            ds.altitude,
+            input_core_dims=[["altitude"], ["altitude"], ["altitude"]],
+            output_core_dims=[["altitude"]],
+            vectorize=True,
+        )
+    )
+
+
+def remove_n2_outliers(ds, nstd=3, dim="sonde"):
+    maxn2 = ds.n2.sel(altitude=slice(8000, 10000)).max(dim="altitude")
+    mean, std = norm.fit(maxn2.where(maxn2 < 3 * maxn2.std()).dropna("sonde").values)
+    return ds.where(maxn2 < mean + nstd * std).dropna(
+        dim="sonde", how="all", subset=["launch_lon"]
+    )
 
 
 def fill_gaps(ds, max_igap=1500, max_egap=300):
