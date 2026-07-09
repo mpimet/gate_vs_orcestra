@@ -80,14 +80,14 @@ def open_gate(cid, local=False):
     if local:
         ds = xr.open_dataset(cid, engine="zarr")
     else:
-        ds = (
-            xr.open_dataset(f"ipfs://{cid}", engine="zarr")
-            .set_coords(["launch_lat", "launch_lon", "launch_time"])
-            .swap_dims({"sonde": "launch_time"})
-            .sel(launch_time=slice("1974-08-10", "1974-09-30"))
-            .swap_dims({"launch_time": "sonde"})
-        )
-    return ds
+        ds = xr.open_dataset(f"ipfs://{cid}", engine="zarr")
+
+    return (
+        ds.set_coords(["launch_lat", "launch_lon", "launch_time"])
+        .swap_dims({"sonde": "launch_time"})
+        .sel(launch_time=slice("1974-08-10", "1974-09-30"))
+        .swap_dims({"launch_time": "sonde"})
+    )
 
 
 def open_reanalysis(chunks=None, **kwargs):
@@ -104,7 +104,7 @@ def open_reanalysis(chunks=None, **kwargs):
 def get_cids():
     orcestra_main = "QmXkSUDo97PaDxsPzCPXJXwCFDLBMp7AVdPdV5CBQoagUN"
     return {
-        "gate": "QmWZryTDTZu68MBzoRDQRcUJzKdCrP2C4VZfZw1sZWMJJc",
+        "gate": "bafybeiccxo3qnccbqki2ccpv3bpjby72kkwg5sc3yv5rxu54l3rfnn3jgy",
         "orcestra": orcestra_main,
         "radiosondes": "QmcQRuqCgLRUVyCXjzmKfRVL34xxnxzL91PWTJSELrtQxa",
         "dropsondes": f"{orcestra_main}/products/HALO/dropsondes/Level_3/PERCUSION_Level_3.zarr",
