@@ -4,7 +4,7 @@ import hashlib
 import numpy as np
 import glob
 import tqdm
-import  utilities.gate_process as gp
+import utilities.gate_process as gp
 
 from pydropsonde.processor import Sonde
 from pydropsonde.pipeline import sondes_to_gridded
@@ -210,7 +210,9 @@ gridded.l3_filename = "GATE_l2.zarr"
 gridded.write_l3(l3_dir="/Users/helene/Documents/Data/GATE/")
 # %%
 circle = Circle(
-    circle_ds=gp.mask_unphysical(gridded.concat_sonde_ds).drop_vars(["interpolated_time"]),
+    circle_ds=gp.mask_unphysical(gridded.concat_sonde_ds).drop_vars(
+        ["interpolated_time"]
+    ),
     clon=0.0,
     clat=0.0,
     crad=0.0,
@@ -230,7 +232,7 @@ gate_final = (
     .sel(
         altitude=slice(-0, 25000),
     )
-    #.where(circle.circle_ds.launch_time.dt.month.isin([8, 9]), drop=True)
+    # .where(circle.circle_ds.launch_time.dt.month.isin([8, 9]), drop=True)
 )
 
 # %%
