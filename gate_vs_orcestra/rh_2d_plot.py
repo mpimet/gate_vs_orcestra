@@ -162,9 +162,9 @@ for key in sfc_est.keys():
     )
 
 adiabat_fits = {
-    key: thermo.make_sounding_from_adiabat(P, sfc_est[key]["T"], sfc_est[key]["q"]).rename(
-       { "T":"ta","P":"p" }
-    )
+    key: thermo.make_sounding_from_adiabat(
+        P, sfc_est[key]["T"], sfc_est[key]["q"]
+    ).rename({"T": "ta", "P": "p"})
     for key in sfc_est.keys()
 }
 
@@ -210,9 +210,9 @@ def get_rh(datasets, rhname, pseudo_ds):
 
 ref_rh = "orcestra"
 adiabat_fits = {
-    key: ds.assign(
-        rh=("altitude", get_rh(iwv, ref_rh, ds).values)
-    ).sel(altitude=slice(0, 11500))
+    key: ds.assign(rh=("altitude", get_rh(iwv, ref_rh, ds).values)).sel(
+        altitude=slice(0, 11500)
+    )
     for key, ds in adiabat_fits.items()
 }
 
@@ -220,21 +220,21 @@ adiabat_fits = {
 
 fig, ax = plt.subplots()
 for key, ds in adiabat_fits.items():
-    ax.plot(
-        ds.rh, ds.ta, label=key, color=set.colors[key]
-    )
+    ax.plot(ds.rh, ds.ta, label=key, color=set.colors[key])
 
 ax.invert_yaxis()
 sns.despine()
 # %%
 
 adiabat_fits = {
-    key: calc_iwv(ds.assign(q=mtf.relative_humidity_to_specific_humidity(
-        
-        RH=ds.rh, p=ds.p, T=ds.ta, es=es
-    )))
+    key: calc_iwv(
+        ds.assign(
+            q=mtf.relative_humidity_to_specific_humidity(
+                RH=ds.rh, p=ds.p, T=ds.ta, es=es
+            )
+        )
+    )
     for key, ds in adiabat_fits.items()
-
 }
 
 # %%
@@ -245,11 +245,11 @@ sns.set_context("paper")
 
 fig, axes = plt.subplots(ncols=2, figsize=(cw, cw / 2), width_ratios=[0.6, 0.45])
 
-for name,s, offset, ha in [
+for name, s, offset, ha in [
     #    ("rapsodi", "ORCESTRA-RS"),
     #   ("beach", "ORCESTRA-DS"),
-    ("gate","GATE", 0.,"right"),
-    ("orcestra","ORC", 0.5, "left"),
+    ("gate", "GATE", 0.0, "right"),
+    ("orcestra", "ORC", 0.5, "left"),
 ]:
     sns.histplot(
         data=iwv[name].iwv,
@@ -280,7 +280,9 @@ for name,s, offset, ha in [
         va="top",
         rotation=90,
     )
-    axes[0].axvline(adiabat_fits[name].iwv, ymax=0.8, color=set.colors[name], linestyle="--")
+    axes[0].axvline(
+        adiabat_fits[name].iwv, ymax=0.8, color=set.colors[name], linestyle="--"
+    )
     print(f"{name} pseudo", adiabat_fits[name].iwv.values)
 
 
