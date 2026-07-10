@@ -504,7 +504,6 @@ sns.kdeplot(X2, ax=axs[1], label="ORCESTRA, HALO", color=colors["orcestra"], lw=
 ticks = [np.median(X1).round(2), np.median(X2).round(2)]
 print(f"Temperature difference of moist adiabats {np.median(X1) - np.median(X2):.2f} K")
 
-axs[1].set_ylabel("density")
 axs[1].set_xlabel("$T_*$ / K")
 
 axs[1].set_ylim(0.0, 1.4)
