@@ -90,12 +90,6 @@ def adiabat(
     return TPq
 
 
-def find_x(y_q, f_t):
-    return brentq(lambda x: spline(x, y_q, grid=False) - f_t, 290, 310)
-
-
-find_x_vec = np.vectorize(find_x)
-
 fpath = "/Users/m219063/work/data/orcestra/gate/aircraft"
 raf_names = [
     "NCAR_SABRE_MEANS",
@@ -113,12 +107,14 @@ cpd = constants.cpd
 Rd = constants.Rd
 Rv = constants.Rv
 P0 = constants.P0
-T_min = 210.0
-T_max = 260.0
+T_min = 225.0
+T_max = 270.0
 
+cw = 190 / 25.4
+sns.set_context(context="paper")
 
 es = svp.liq_wagner_pruss
-P = np.arange(100500, 10000, -100)
+P = np.arange(101275, 10000, -100)
 
 cids = dus.get_cids()
 beach = dus.open_dropsondes(cids["dropsondes"])
@@ -132,8 +128,10 @@ bs = dpp.sel_percusion_E(dus.open_dropsondes(cids["dropsondes"]))
 # -- lookup adiabatic values
 Tsfc = np.arange(290, 305, 0.1)
 adiabats = []
+Psfc = gs.p.mean(dim="sonde")[0].squeeze().values
+RHsfc = gs.rh.mean(dim="sonde")[0].squeeze().values
 for T in Tsfc:
-    adiabats.append(adiabat(P, T, RHsfc=0.8, integrate=False))
+    adiabats.append(adiabat(P, T, Psfc = Psfc, RHsfc=RHsfc, integrate=False))
 dx = xr.concat(adiabats, dim=xr.DataArray(Tsfc, dims="Tsfc"))
 dx["P"] = dx.P[0, :]
 dx["q"] = dx.q[:, 0]
@@ -143,9 +141,33 @@ dx["T_rho"] = dx.T * (1.0 - dx.q + qv * Rv / Rd)
 
 lookup_adiabat = dx.set_coords("P").swap_dims({"levels": "P"}).set_index(P="P")
 
-spline = RectBivariateSpline(
+spline80 = RectBivariateSpline(
     lookup_adiabat.Tsfc, lookup_adiabat.P[::-1], lookup_adiabat.T_rho[:, ::-1]
 )
+
+adiabats = []
+Psfc = rs.p.mean(dim="sonde")[0].squeeze().values
+RHsfc = rs.rh.mean(dim="sonde")[0].squeeze().values
+for T in Tsfc:
+    adiabats.append(adiabat(P, T, Psfc = Psfc, RHsfc=RHsfc, integrate=False))
+dx = xr.concat(adiabats, dim=xr.DataArray(Tsfc, dims="Tsfc"))
+dx["P"] = dx.P[0, :]
+dx["q"] = dx.q[:, 0]
+
+qv = mt.saturation_partition(dx.P, es(dx.T), dx.q)
+dx["T_rho"] = dx.T * (1.0 - dx.q + qv * Rv / Rd)
+
+lookup_adiabat = dx.set_coords("P").swap_dims({"levels": "P"}).set_index(P="P")
+
+spline82 = RectBivariateSpline(
+    lookup_adiabat.Tsfc, lookup_adiabat.P[::-1], lookup_adiabat.T_rho[:, ::-1]
+)
+
+spline = spline80
+def find_x(y_q, f_t, spline=spline):
+    return brentq(lambda x: spline(x, y_q, grid=False) - f_t, 290, 310)
+
+find_x_vec = np.vectorize(find_x)
 
 # %%
 # - get halo data
@@ -191,19 +213,19 @@ for raf in raf_names:
         .sel(lon=slice(-34, -20))
     )
     rafs[raf] = xx.swap_dims({"lon": "time"})
-
+# %%
+print(
+    len(pd.to_datetime(halo.TIME.values).normalize().unique()),
+    halo.PS.max().values,
+    halo.PS.min().values,
+)
 # %%
 # -- inspect aircraft data
-T_max = 260.0
 raf_xx = {}
 for raf, ds in rafs.items():
-    print(f"\n{raf}")
-    print(
-        f"  Min lat {ds.lat.min().values:.1f} degN, min temperature {ds.ta.min().values:.1f} K"
-    )
-    ftime = pd.Timestamp(ds.time.min().values.item())
-    print(f"  first flight: {pd.Timestamp(ds.time.min().values.item()):%Y-%m-%d}")
-    print(f"  last flight: {pd.Timestamp(ds.time.max().values.item()):%Y-%m-%d}")
+    mask = ds.ta < T_max
+    p_vals = ds.p.where(mask.compute(), drop=True).values
+    ta_vals = ds.ta.where(mask.compute(), drop=True).values
     if ds.ta.min() < T_max:
         unique_days = pd.to_datetime(ds.time.values).normalize().unique()
         raf_xx[raf] = {}
@@ -213,9 +235,16 @@ for raf, ds in rafs.items():
             dx = ds.sel(time=f"{day:%Y-%m-%d}")
             if dx.ta.min() < T_max:
                 raf_xx[raf]["flights"].append(f"{day:%Y-%m-%d}")
-
-for key in raf_xx.keys():
-    print(key, len(raf_xx[key]["flights"]))
+        print(f"\n{raf}: {len(raf_xx[raf]['flights'])} flights")
+        print(
+            f"  Min lat {ds.lat.min().values:.1f} degN, min temperature {ta_vals.min():.1f} K"
+        )
+        print(
+            f"  Mean lat {ds.lat.mean().values:.1f} degN, {p_vals.max() / 100:.1f} hPa - {p_vals.min() / 100:.1f} hPa"
+        )
+        ftime = pd.Timestamp(ds.time.min().values.item())
+        print(f"  first flight: {pd.Timestamp(ds.time.min().values.item()):%Y-%m-%d}")
+        print(f"  last flight: {pd.Timestamp(ds.time.max().values.item()):%Y-%m-%d}")
 
 # %%
 # -- plot flight time versus latitude
@@ -234,23 +263,20 @@ for raf in raf_xx.keys():
     X2 = []
     for flight in raf_xx[raf]["flights"]:
         dx = ds.sel(time=f"{flight}")
-        mask = (dx.ta > T_min) & (dx.ta < T_max)
+        mask = dx.ta < T_max
         p_vals = dx.p.where(mask.compute(), drop=True).values
         ta_vals = dx.ta.where(mask.compute(), drop=True).values
         try:
-            xx = np.concatenate([find_x_vec(p_vals, ta_vals), xx])
+            xx = np.concatenate([find_x_vec(p_vals, ta_vals, spline=spline80), xx])
             X1.append(np.mean(xx))
             X2.append(np.mean(p_vals))
         except:
             pass
-    print(f"{raf}", len(X1), len(X2))
     raf_xx[raf]["T_sfc"] = np.asarray(X1)
     raf_xx[raf]["P"] = np.asarray(X2)
 
 # %%
 # -- compare to individual soundings
-cw = 190 / 25.4
-sns.set_context(context="paper")
 cmap = plt.get_cmap("twilight")
 norm = Normalize(vmin=0, vmax=24)  # hours in a day
 
@@ -270,7 +296,7 @@ for raf in raf_xx.keys():
         else:
             ax = axs[ncol]
         dx = raf_xx[raf]["ds"].sel(time=f"{flight}")
-        mask = (dx.ta > T_min) & (dx.ta < T_max)
+        mask = dx.ta < T_max
         p_vals = dx.p.where(mask.compute(), drop=True).values
         ta_vals = dx.ta.where(mask.compute(), drop=True).values
         if len(p_vals) > 2:
@@ -299,9 +325,6 @@ for raf in raf_xx.keys():
 
 # %%
 # -- compare to individual soundings
-cw = 190 / 25.4
-sns.set_context(context="paper")
-
 
 ticks = []
 for raf in raf_xx.keys():
@@ -309,7 +332,7 @@ for raf in raf_xx.keys():
     tdiff = np.asarray([])
     for flight in raf_xx[raf]["flights"]:
         dx = raf_xx[raf]["ds"].sel(time=f"{flight}")
-        mask = (dx.ta > T_min) & (dx.ta < T_max)
+        mask = dx.ta < T_max
         p_vals = dx.p.where(mask.compute(), drop=True).values
         if len(p_vals) > 2:
             gx = (
@@ -352,7 +375,7 @@ intersection = [x for x in halo_days if x in meteor_days]
 for flight in intersection:
     day = f"{flight:%Y-%m-%d}"
     dx = halo.sel(TIME=f"{day}")
-    mask = (dx.TS > T_min) & (dx.TS < T_max)
+    mask = dx.TS < T_max
     p_vals = dx.PS.where(mask.compute(), drop=True).values
     if len(p_vals) > 2:
         rx = (
@@ -390,11 +413,11 @@ for raf in raf_xx.keys():
     ds = raf_xx[raf]
     for flight in raf_xx[raf]["flights"]:
         dx = raf_xx[raf]["ds"].sel(time=f"{flight}")
-        mask = (dx.ta > T_min) & (dx.ta < T_max)
+        mask = dx.ta < T_max
         p_vals = dx.p.where(mask.compute(), drop=True).values
         ta_vals = dx.ta.where(mask.compute(), drop=True).values
         try:
-            X1 = np.concatenate([X1, find_x_vec(p_vals, ta_vals)])
+            X1 = np.concatenate([X1, find_x_vec(p_vals, ta_vals, spline=spline80)])
         except:
             pass
 sns.kdeplot(X1, label="GATE Aircraft", color=colors["gate"], ax=ax)
@@ -405,34 +428,16 @@ X2 = np.asarray([])
 for flight in intersection:
     day = f"{flight:%Y-%m-%d}"
     dx = halo.sel(TIME=f"{day}")
-    mask = (dx.TS > 190) & (dx.TS < 400)
+    mask = dx.TS < T_max
     p_vals = dx.PS.where(mask.compute(), drop=True).values * 100.0
     ta_vals = dx.TS.where(mask.compute(), drop=True).values
     if len(p_vals) > 2:
         try:
-            X2 = np.concatenate([X2, find_x_vec(p_vals, ta_vals)])
+            X2 = np.concatenate([X2, find_x_vec(p_vals, ta_vals, spline=spline82)])
         except:
             pass
 ticks.append(np.median(X1))
 ticks.append(np.median(X2))
-
-cw = 190 / 25.4
-sns.set_context(context="paper")
-fig, ax = plt.subplots(1, 1, figsize=(cw / 2, cw / 3))
-
-sns.kdeplot(X1, label="GATE, Aircraft", color=colors["gate"])
-sns.kdeplot(X2, label="ORCESTRA, HALO", color=colors["orcestra"])
-
-ticks = [np.median(X1), np.median(X2)]
-print(f"Temperature difference of moist adiabats {np.median(X1) - np.median(X2):.2f} K")
-
-ax.set_xlabel("$T_\\mathrm{sfc}$ / K")
-ax.set_ylabel("$p(T_\\mathrm{sfc})$")
-ax.set_xticks(ticks, minor=True)
-
-sns.despine(offset=10)
-plt.legend()
-plt.show()
 
 # %%
 # -- moist adiabatic analysis of sounding datasets
@@ -443,9 +448,6 @@ datasets = {
     "gate-day": {"sondes": gs, "color": colors["gate"]},
     "rapsodi-day": {"sondes": rs, "color": colors["rapsodi"]},
 }
-
-T_min = 225.0
-T_max = 260.0
 
 for dataset in datasets.keys():
     datasets[dataset]["exclude"] = []
@@ -459,34 +461,46 @@ for dataset in datasets.keys():
     datasets[dataset]["tma"] = np.asarray([])
     datasets[dataset]["ta"] = np.asarray([])
 
+    spline = spline82
+    if dataset.find("gate") != -1:
+        spline = spline80
+        print (f"computing {dataset} with spline 80")
+
     for sonde in np.arange(0, sondes["sonde"].size, 1):
         xs = sondes.sel(sonde=sonde)
 
-        mask = (xs.ta > T_min) & (xs.ta < T_max)
+        mask = (xs.ta > T_min) & (xs.ta < T_max) & (xs.p > 10000.)
         p_vals = xs.p.where(mask, drop=True).values
         ta_vals = xs.ta.where(mask, drop=True).values
 
         try:
-            xx = find_x_vec(p_vals, ta_vals)
+            xx = find_x_vec(p_vals, ta_vals, spline=spline)
             T1.append(np.mean(xx))
             T2.append(np.std(xx))
             datasets[dataset]["tma"] = np.concatenate([datasets[dataset]["tma"], xx])
             datasets[dataset]["ta"] = np.concatenate([datasets[dataset]["ta"], ta_vals])
 
         except:
+            print (f"excluding sonde {sonde}, {len(p_vals)}, {len(ta_vals)}")
             datasets[dataset]["exclude"].append(sonde)
 
     datasets[dataset]["Tsfc_avg"] = np.asarray(T1)
     datasets[dataset]["Tsfc_std"] = np.asarray(T2)
 
+print(
+    f"mean: {datasets['gate']['Tsfc_avg'].mean():.2f}K, std {datasets['gate']['Tsfc_std'].mean():.2f}K"
+)
 # %%
 # -- plotting moist adiabatic analysis
+fig, axs = plt.subplots(2, 1, figsize=(cw / 2, cw / 1.25))
+
 for dataset in datasets.keys():
     ls = "solid"
     if dataset.find("day") != -1:
         ls = "dashed"
     sns.kdeplot(
         datasets[dataset]["Tsfc_avg"],
+        ax=axs[0],
         label=f"{dataset}",
         color=datasets[dataset]["color"],
         lw=2.0,
@@ -496,35 +510,118 @@ for dataset in datasets.keys():
         f"{dataset}: excluded {len(datasets[dataset]['exclude'])} of {datasets[dataset]['sondes']['sonde'].size} sondes, median {np.median(datasets[dataset]['Tsfc_avg']):.2f}"
     )
 
-plt.legend()
-plt.gca().set_xlabel("Moist Adiabat / K")
-plt.gca().set_xlim(297.5, 301.5)
 tick1 = np.median(datasets["gate"]["Tsfc_avg"]).round(2)
 tick2 = np.median(datasets["rapsodi"]["Tsfc_avg"]).round(2)
-plt.gca().set_xticks([tick1, tick2])
 tick3 = np.median(datasets["beach"]["Tsfc_avg"]).round(2)
-plt.gca().set_xticks([tick3], minor=True)
+print (np.std(datasets["rapsodi"]["Tsfc_avg"]).round(4))
+print (np.std(datasets["gate"]["Tsfc_avg"]).round(4))
+axs[0].set_xticks([tick1, tick2])
+axs[0].set_xticks([tick3], minor=True)
+axs[0].set_yticks([0, 0.5, 1, 1.5])
+axs[0].set_ylim(0, 1.7)
+axs[0].set_xlim(297.5, 301.5)
+axs[0].legend(ncol=2, fontsize=8, bbox_to_anchor=(0.5, 1.0), loc="upper right")
+
+sns.kdeplot(X1, ax=axs[1], label="GATE, Aircraft", color=colors["gate"], lw=2)
+sns.kdeplot(X2, ax=axs[1], label="ORCESTRA, HALO", color=colors["orcestra"], lw=2)
+
+ticks = [np.median(X1).round(2), np.median(X2).round(2)]
+print(f"Temperature difference of moist adiabats {np.median(X1) - np.median(X2):.2f} K")
+
+axs[1].set_ylabel("density")
+axs[1].set_xlabel("Moist Adiabat / K")
+
+axs[1].set_ylim(0.0, 1.4)
+axs[1].set_xticks(ticks)
+axs[1].set_ylim(0, 1.1)
+axs[1].set_yticks([0, 0.5, 1])
+axs[1].set_xlim(297, 302)
 
 sns.despine(offset=10)
+axs[1].legend(ncol=1, fontsize=8, bbox_to_anchor=(1.05, 1.0), loc="upper right")
 
+sns.despine(offset=10)
+fig.tight_layout()
+plt.savefig("plots/moist-adiabats.pdf")
+# %%
+datasets["rapsodi"]
 # %%
 # -- moist adiabatic analysis as scatter plot
-for dataset in datasets.keys():
+
+fig, ax = plt.subplots(1, 1, figsize=(cw / 2, cw / 2))
+
+for dataset in ["gate","rapsodi","beach"]:
     try:
         color = colors[dataset]
-        alpha = 0.01
+        if (dataset=="gate") :
+            alpha = 0.005
+        else:
+            alpha = 0.01
         plt.scatter(
             datasets[dataset]["tma"],
             datasets[dataset]["ta"],
             label=dataset,
-            color=color,
+            edgecolors='none',
+            facecolors=color,
             alpha=alpha,
-            s=3,
+            s=2,
         )
     except:
         print(f"not plotting {dataset}")
 
-plt.gca().set_xlabel("Moist Adiabat / K")
-plt.gca().set_ylabel("Temperature / K")
+plt.hlines([210,260],xmin=296, xmax=302, color="k", ls=":")
+plt.gca().set_xlabel("$T_*$ / K")
+plt.gca().set_ylabel("$T$ / K")
 plt.gca().set_xlim(296.5, 301.5)
+plt.gca().invert_yaxis()
 sns.despine(offset=10)
+fig.tight_layout()
+
+fig.savefig(f"plots/fits-scatter.png")
+
+# %%
+# -- document timing of radiosondes to address reviewer question
+nbins = 8
+hour = gs.launch_time.dt.hour
+hour.plot.hist(bins=nbins, range=(0, 23), alpha=0.5, label="gate rs")
+
+hour = rs.launch_time.dt.hour
+hour.plot.hist(bins=nbins, range=(0, 23), alpha=0.5, label="orcestra-rapsodi")
+
+hour = bs.launch_time.dt.hour
+hour.plot.hist(bins=nbins, range=(0, 23), alpha=0.5, label="orcestra-beach")
+
+sns.despine(offset=10)
+plt.legend()
+plt.gca().set_xlim(0, 23.5)
+plt.gca().set_xticks([0, 6, 12, 18])
+
+# %%
+fig, ax = plt.subplots(1, 1, figsize=(cw / 1.5, cw / 2.5))
+times = bs.launch_time
+pressures = halo.sel(TIME=times, method="nearest").PS * 100
+nbins = 50
+ticks = []
+for dp in [1000, 2000, 3000]:
+    tx = bs.ta.where(bs.p < pressures + dp).max(dim="altitude")
+    tx.plot.hist(
+        ax=ax,
+        bins=nbins,
+        range=(203, 228),
+        alpha=0.5,
+        label=f"Dropsonde at $P_\\mathrm{{HALO}}$+{dp / 100:.0f} hPA",
+    )
+    ticks.append(tx.mean().round(2))
+tx = halo.sel(TIME=times, method="nearest").TS
+tx.plot.hist(ax=ax, bins=nbins, range=(203, 228), alpha=0.5, label="HALO")
+ticks.append(tx.mean().round(2))
+sns.despine(offset=10)
+ax.set_xlim(207, 223)
+ax.set_xticks(ticks)
+ax.set_xlabel("$T$ / hPa")
+plt.legend(fontsize=8)
+fig.tight_layout()
+
+fig.savefig(f"plots/flight-dropsonde-temperature.pdf")
+
+# %%
