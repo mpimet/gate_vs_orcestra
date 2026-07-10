@@ -535,16 +535,10 @@ ylim = (0, 15000)
 tlim = (296, 356)
 nlim = (0, 0.02)
 rlim = (0, 1)
-
-rs_bar.theta.plot(
-    ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="rapsodi", color=colors["rapsodi"]
-)
-bs_bar.theta.plot(
-    ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="beach", color=colors["beach"]
-)
-gs_bar.theta.plot(
-    ax=ax, y="altitude", ylim=ylim, xlim=tlim, label="gate", color=colors["gate"]
-)
+for key in ["rapsodi", "beach", "gate"]:
+    sonde_means[key].theta.plot(
+        ax=ax, y="altitude", ylim=ylim, xlim=tlim, label=key, color=colors[key]
+    )
 
 ax.set_xlabel("$\\theta$ / K")
 
@@ -557,14 +551,10 @@ plt.savefig("plots/theta.pdf")
 #
 sns.set_context(context="paper")
 fig, ax = plt.subplots(1, 2, figsize=(5, 3), sharey=True)
+for key in ["rapsodi", "beach", "gate"]:
+    sonde_means[key].u.plot(ax=ax[0], y="altitude", label=key, color=colors[key])
+    sonde_means[key].v.plot(ax=ax[1], y="altitude", label=key, color=colors[key])
 
-rs_bar.u.plot(ax=ax[0], y="altitude", label="rapsodi", color=colors["rapsodi"])
-gs_bar.u.plot(ax=ax[0], y="altitude", label="gate", color=colors["gate"])
-bs_bar.u.plot(ax=ax[0], y="altitude", label="beach", color=colors["beach"])
-
-rs_bar.v.plot(ax=ax[1], y="altitude", ylim=ylim, color=colors["rapsodi"])
-gs_bar.v.plot(ax=ax[1], y="altitude", color=colors["gate"])
-bs_bar.v.plot(ax=ax[1], y="altitude", color=colors["beach"])
 
 ax[0].axvline(x=0.0, ls=":", lw=1)
 ax[1].axvline(x=0.0, ls=":", lw=1)
@@ -578,17 +568,21 @@ ax[0].set_xlim(-23, 10)
 ax[0].set_yticks(np.arange(0, 18300, 3000))
 ax[0].set_yticklabels([0, 3, 6, 9, 12, 15, 18])
 
-umn = rs_bar.u.min().values
-umx = bs_bar.u.max().values
-vmx = bs_bar.v.sel(altitude=slice(0, 5000)).max().values
-
-z0 = (bs_bar.u**2).idxmin(dim="altitude")
-z1 = (bs_bar.u).idxmin(dim="altitude")
+z0 = (sonde_means["beach"].u ** 2).idxmin(dim="altitude")
+z1 = (sonde_means["beach"].u).idxmin(dim="altitude")
 ax[0].set_yticks([z0, z1], minor=True)
-ax[0].set_xticks([np.round(umn, 1), 0, np.round(umx, 1)])
+ax[0].set_xticks(
+    [
+        np.round(sonde_means["rapsodi"].u.min().values, 1),
+        0,
+        np.round(sonde_means["rapsodi"].u.max().values, 1),
+    ]
+)
 
-ax[1].set_xticks([0, np.round(vmx, 1)])
+ax[1].set_xticks(
+    [0, np.round(sonde_means["beach"].v.sel(altitude=slice(0, 5000)).max().values, 1)]
+)
 ax[1].set_xlim(-3, 7)
-
+ax[0].set_ylim(0, 18000)
 sns.despine(offset=10)
 plt.savefig("plots/zonal-wind.pdf")
