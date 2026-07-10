@@ -3,6 +3,7 @@
 #
 import utilities.data_utils as dus
 import utilities.preprocessing as dpp
+import utilities.modify_ds as md
 from utilities.settings_and_colors import colors
 
 import xarray as xr
@@ -22,49 +23,53 @@ es = svp.liq_wagner_pruss
 #
 cids = dus.get_cids()
 beach = dus.open_dropsondes(cids["dropsondes"])
+
 rapsodi = dus.open_radiosondes(cids["radiosondes"])
 gate = dus.open_gate(cids["gate"])
 
 # %%
 # - localize data into different domains
 #
-gs_PE = dpp.sel_percusion_E(gate)
-rs_PE = dpp.sel_percusion_E(rapsodi)
-bs_PE = dpp.sel_percusion_E(beach)
+sondes = {
+    "gate": dpp.sel_percusion_E(gate),
+    "rapsodi": dpp.sel_percusion_E(
+        rapsodi.assign(
+            n2=xr.apply_ufunc(
+                mtf.brunt_vaisala_frequency,
+                rapsodi.theta,
+                rapsodi.q,
+                rapsodi.altitude,
+                input_core_dims=[["altitude"], ["altitude"], ["altitude"]],
+                output_core_dims=[["altitude"]],
+                vectorize=True,
+            )
+        )
+    ),
+    "beach": dpp.sel_percusion_E(
+        beach.assign(
+            n2=xr.apply_ufunc(
+                mtf.brunt_vaisala_frequency,
+                beach.theta,
+                beach.q,
+                beach.altitude,
+                input_core_dims=[["altitude"], ["altitude"], ["altitude"]],
+                output_core_dims=[["altitude"]],
+                vectorize=True,
+            )
+        )
+    ),
+}
+sonde_means = {
+    key: sondes[key].mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
+    for key in sondes.keys()
+}
 
-gs_GA = dpp.sel_gate_A(gs_PE)
-rs_GA = dpp.sel_gate_A(rs_PE)
-bs_GA = dpp.sel_gate_A(bs_PE)
-
-gs_PE_bar = gs_PE.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
-rs_PE_bar = rs_PE.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
-bs_PE_bar = bs_PE.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
-
-gs_GA_bar = gs_GA.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
-rs_GA_bar = rs_GA.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
-bs_GA_bar = bs_GA.mean(dim="sonde").coarsen(altitude=10, boundary="trim").mean()
-
-# For subsequent comparisons decide which region
-gs_bar = gs_PE_bar
-rs_bar = rs_PE_bar
-bs_bar = bs_PE_bar
 
 # %%
 # - get aircraft data
-halo = (
-    xr.open_dataset(
-        "ipfs://bafybeif52irmuurpb27cujwpqhtbg5w6maw4d7zppg2lqgpew25gs5eczm",
-        engine="zarr",
-    )
-    .rename_vars(
-        {
-            "IRS_LAT": "latitude",
-            "IRS_LON": "longitude",
-            "IRS_ALT": "altitude",
-        }
-    )
-    .set_coords(({"latitude", "longitude", "altitude"}))
-).pipe(dpp.sel_percusion_E, item_var="TIME", lon_var="longitude", lat_var="latitude")
+halo = dus.open_halo(cids["halo"]).pipe(
+    dpp.sel_percusion_E, item_var="TIME", lon_var="longitude", lat_var="latitude"
+)
 
 hal = (
     halo.swap_dims({"TIME": "altitude"})
