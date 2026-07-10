@@ -10,8 +10,9 @@ import moist_thermodynamics.constants as mtc
 import utilities.data_utils as dus
 import utilities.preprocessing as pp
 import utilities.modify_ds as md
-from utilities.settings_and_colors import colors  # noqa
+import utilities.settings_and_colors as set
 
+es = svp.liq_wagner_pruss
 # %%
 cids = dus.get_cids()
 datasets = {
@@ -41,29 +42,17 @@ ta_bin_num = 200
 var_bin_num = 100
 ta_datasets = {name: [] for name in datasets.keys()}
 for name, ds in datasets.items():
-    ta_datasets[name].append(
-        md.get_hist_of_ta(
-            ds.ta.sel(altitude=slice(0, 14000)),
-            ds.rh.sel(altitude=slice(0, 14000)),
-            var_binrange=(0, 1.1),
-            ta_binrange=(220, 305),
-            var_bin_num=var_bin_num,
-            ta_bin_num=ta_bin_num,
-        ).rename("rh")
+    ta_datasets[name] = xr.merge(
+        [
+            md.get_hist_of_ta(
+                ds.sel(altitude=slice(0, 14000)),
+                ta_binrange=(220, 305),
+                ta_bin_num=ta_bin_num,
+                var=var,
+            )
+            for var in ["p", "rh"]
+        ]
     )
-for name, ds in datasets.items():
-    ta_datasets[name].append(
-        md.get_hist_of_ta(
-            ds.ta.sel(altitude=slice(0, 14000)),
-            ds.p.sel(altitude=slice(0, 14000)),
-            var_binrange=(10000, 100000),
-            ta_binrange=(220, 305),
-            var_bin_num=var_bin_num,
-            ta_bin_num=ta_bin_num,
-        ).rename("p")
-    )
-for name, ds in datasets.items():
-    ta_datasets[name] = xr.merge(ta_datasets[name])
 # %%
 ta_2d_datasets = {}
 for name, ds in datasets.items():
@@ -79,7 +68,7 @@ for name, ds in datasets.items():
 # %% additional lines for RH-T plot
 
 
-es_liq = svp.liq_hardy  # liq_wagner_pruss
+es_liq = es
 es_ice = svp.ice_wagner_etal
 es_mixed = mtf.make_es_mxd(es_liq=es_liq, es_ice=es_ice)
 
