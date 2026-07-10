@@ -482,36 +482,47 @@ fig.tight_layout()
 # -- plot difference depending on domain
 #
 
-ax[1].set_xticks([0.75, np.round((x1 + x2) / 2, 2), 0.9])
+sondes_gateA = {
+    key: dpp.sel_gate_A(ds)
+    .mean(dim="sonde")
+    .coarsen(altitude=10, boundary="trim")
+    .mean()
+    for key, ds in sondes.items()
+}
 
-gate["p"].sel(altitude=slice(10, 50)).plot.hist(
-    ax=ax[2], bins=30, alpha=0.4, density=True, color=colors["gate"]
-)
-rapsodi["p"].sel(altitude=slice(10, 50)).plot.hist(
-    ax=ax[2], bins=30, alpha=0.4, density=True, color=colors["rapsodi"]
-)
-beach["p"].sel(altitude=slice(10, 50)).plot.hist(
-    ax=ax[2], bins=30, alpha=0.4, density=True, color=colors["beach"]
-)
-ax[2].set_xlim(100000, 102000)
-ax[2].set_xlabel("$p_\\mathrm{sfc}$ / $-$")
 
-x1 = (
-    rapsodi["p"]
-    .sel(altitude=slice(0, 50))
-    .stack(points=["sonde", "altitude"])
-    .quantile(0.5)
-    .values
-)
-x2 = (
-    gate["p"]
-    .sel(altitude=slice(0, 50))
-    .stack(points=["sonde", "altitude"])
-    .quantile(0.5)
-    .values
-)
+sns.set_context("paper")
+fig, ax = plt.subplots(1, 2, figsize=(5, 3), sharey=True)
 
-ax[2].set_xticks([100000, np.round((x1 + x2) / 2, 2), 102000])
+for key in ["beach", "rapsodi"]:
+    difftheta = sondes_gateA[key].theta - sonde_means[key].theta
+    difftheta.plot(ax=ax[0], y="altitude", ylim=ylim, label=key, c=colors[key])
+    print(
+        f"diff {key} theta: {difftheta.sel(altitude=slice(0, 14000)).mean().values:.2f}"
+    )
+    diffu = sondes_gateA[key].u - sonde_means[key].u
+    diffu.plot(ax=ax[1], y="altitude", ylim=ylim, label=key, c=colors[key])
+    print(f"diff {key} u: {diffu.sel(altitude=slice(0, 14000)).mean().values:.2f}")
+
+ax[0].set_ylim(0, 14300)
+ax[0].set_xlim(-1, 1)
+ax[0].set_xlabel("$\\Delta \\theta$ / K")
+ax[1].set_xlabel("$\\Delta u$ / ms$^{-1}$")
+ax[0].set_ylabel("z / km")
+ax[0].set_xticks(
+    [
+        (sondes_gateA[key].theta - sonde_means[key].theta)
+        .sel(altitude=slice(0, 14000))
+        .mean()
+        .values
+        for key in ["beach", "rapsodi"]
+    ],
+    minor=True,
+)
+ax[0].set_yticks(np.arange(0, 12300, 3000))
+ax[0].set_yticklabels([0, 3, 6, 9, 12])
+ax[1].set_ylabel(None)
+plt.legend()
 
 sns.despine(offset=10)
 # %%
