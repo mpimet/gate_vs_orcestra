@@ -4,10 +4,14 @@
 import moist_thermodynamics.functions as mtf
 import moist_thermodynamics.constants as mtc
 import moist_thermodynamics.utilities as mtu
+from moist_thermodynamics.saturation_vapor_pressures import es
+
 import numpy as np
 import xarray as xr
 
 P = np.arange(100900.0, 4000.0, -500)
+Rv = mtc.Rv
+Rd = mtc.Rd
 
 
 def make_sounding_from_adiabat(
@@ -67,6 +71,42 @@ def make_sounding_from_adiabat(
                 "units": "K",
                 "standard_name": "air_potential_teimerature",
                 "symbol": "$\theta$",
+            },
+        )
+    )
+    TPq = TPq.assign(
+        Trho=(
+            TPq.T.dims,
+            (
+                TPq.T
+                * (
+                    1.0
+                    - TPq.q
+                    + mtf.saturation_partition(TPq.P, es(TPq.T), TPq.q) * Rv / Rd
+                )
+            ).values,
+            {
+                "units": "K",
+                "standard_name": "density temperature",
+                "symbol": "$T_\rho$",
+            },
+        )
+    )
+    TPq = TPq.assign(
+        theta_rho=(
+            TPq.T.dims,
+            (
+                TPq.theta
+                * (
+                    1.0
+                    - TPq.q
+                    + mtf.saturation_partition(TPq.P, es(TPq.T), TPq.q) * Rv / Rd
+                )
+            ).values,
+            {
+                "units": "K",
+                "standard_name": "density potential temperature",
+                "symbol": "$T_\rho$",
             },
         )
     )
