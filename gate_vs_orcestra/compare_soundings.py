@@ -361,68 +361,48 @@ sns.despine(ax=ax[2], offset=0)
 fig.tight_layout()
 fig.savefig("plots/sounding-new.pdf")
 # %%
-len(x_mns)
+
 # %%
 # - write diagnostics
-#
-rx = rs_bar.sel(altitude=slice(0, 12000)).set_coords("p").swap_dims({"altitude": "p"})
-gx = gs_bar.sel(altitude=slice(0, 12000)).set_coords("p").swap_dims({"altitude": "p"})
-bx = bs_bar.sel(altitude=slice(0, 12000)).set_coords("p").swap_dims({"altitude": "p"})
+
+gx = (
+    sonde_means["gate"]
+    .sel(altitude=slice(0, 12000))
+    .set_coords("p")
+    .swap_dims({"altitude": "p"})
+)
 pgrid = np.asarray([100000, 70000, 25000])
-dr = (rx.interp(p=pgrid) - gx.interp(p=pgrid))["ta"]
-db = (bx.interp(p=pgrid) - gx.interp(p=pgrid))["ta"]
+for key in ["rapsodi", "beach"]:
+    rx = (
+        sonde_means[key]
+        .sel(altitude=slice(0, 12000))
+        .set_coords("p")
+        .swap_dims({"altitude": "p"})
+    )
+    arr = (rx.interp(p=pgrid) - gx.interp(p=pgrid))["ta"]
+    print(
+        f"Amplificaiton factors\n {key}: {arr.values[2] / arr.values[1]:.2f}, and {arr.values[2] / arr.values[0]:.2f}"
+    )
 
-print(
-    f"Amplificaiton factors\n Rapsodi: {dr.values[2] / dr.values[1]:.2f}, and {dr.values[2] / dr.values[0]:.2f}"
+gp = (
+    adiabat_fits["gate"]
+    .sel(altitude=slice(0, 12000))
+    .set_coords("P")
+    .swap_dims({"altitude": "P"})
 )
-print(
-    f" Beach: {db.values[2] / db.values[1]:.2f}, and {db.values[2] / db.values[0]:.2f}"
+rp = (
+    adiabat_fits["orcestra"]
+    .sel(altitude=slice(0, 12000))
+    .set_coords("P")
+    .swap_dims({"altitude": "P"})
 )
-rp = pseudo2.sel(altitude=slice(0, 12000)).set_coords("P").swap_dims({"altitude": "P"})
-gp = pseudo1.sel(altitude=slice(0, 12000)).set_coords("P").swap_dims({"altitude": "P"})
-dp = (rp.interp(P=pgrid) - gp.interp(P=pgrid))["T"]
+arrp = (rp.interp(P=pgrid) - gp.interp(P=pgrid))["T"]
 print(
-    f" Pseudo-adiabat: {dp.values[2] / dp.values[1]:.2f}, and {dp.values[2] / dp.values[0]:.2f}"
+    f"Adiabat fits: {arrp.values[2] / arrp.values[1]:.2f}, and {arrp.values[2] / arrp.values[0]:.2f}"
 )
+gp.interp(P=pgrid).altitude.values
 
-pgrid = np.asarray([100000, 70000, 35000, 20000])
-heights = gp.interp(P=pgrid).altitude
-print(heights.values)
 
-# %%
-# -- plot difference depending on domain
-#
-sns.set_context("paper")
-fig, ax = plt.subplots(1, 2, figsize=(5, 3), sharey=True)
-
-label = "beach"
-delta_bs = bs_GA_bar.theta - bs_PE_bar.theta
-delta_bar_bs = delta_bs.sel(altitude=slice(0, 14000)).mean().values
-delta_bs.plot(ax=ax[0], y="altitude", ylim=ylim, label=label, c=colors[label])
-delta_bs = bs_GA_bar.u - bs_PE_bar.u
-delta_bs.plot(ax=ax[1], y="altitude", ylim=ylim, label=label, c=colors[label])
-
-label = "rapsodi"
-delta_rs = rs_GA_bar.theta - rs_PE_bar.theta
-delta_bar_rs = delta_rs.sel(altitude=slice(0, 14000)).mean().values
-delta_rs.plot(ax=ax[0], y="altitude", ylim=ylim, label=label, c=colors[label])
-delta_rs = rs_GA_bar.u - rs_PE_bar.u
-delta_rs.plot(ax=ax[1], y="altitude", ylim=ylim, label=label, c=colors[label])
-
-ax[0].set_ylim(0, 14300)
-ax[0].set_xlim(-1, 1)
-ax[0].set_xlabel("$\\Delta \\theta$ / K")
-ax[0].set_ylabel("z / km")
-ax[0].set_xticks([delta_bar_bs, delta_bar_rs], minor=True)
-ax[0].set_yticks(np.arange(0, 12300, 3000))
-ax[0].set_yticklabels([0, 3, 6, 9, 12])
-ax[1].set_ylabel(None)
-
-plt.legend()
-
-sns.despine(offset=10)
-plt.savefig("plots/DeltaT2.pdf")
-print(f"differences: beach {delta_bar_bs:.2f}, rapsodi {delta_bar_rs:.2f}")
 # %%
 # - look at distributions
 #
