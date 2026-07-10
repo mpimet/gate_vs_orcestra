@@ -24,9 +24,6 @@ cids = dus.get_cids()
 beach = dus.open_dropsondes(cids["dropsondes"])
 rapsodi = dus.open_radiosondes(cids["radiosondes"])
 gate = dus.open_gate(cids["gate"])
-# %%
-
-# %%
 
 # %%
 # - localize data into different domains
@@ -194,7 +191,38 @@ zz = np.arange(0, 15000, 10)
 delta_pseudo = pseudo2.T - pseudo1.T.interp(altitude=pseudo2.altitude)
 delta_consrv = consrv2.T - consrv1.T.interp(altitude=consrv2.altitude)
 
+# %%
+# - create theoretical soundings from fits to upper atmosphere
+#
+T_sig = np.sqrt(0.2896**2 + 0.427**2)
+Px = 101275.0
+T_ga = 298.54 #0.1116
+T_or = 299.74 #0.0819
+q_ga = mtf.partial_pressure_to_specific_humidity(mt.es_default(T_ga) * 0.805, Px)
+q_or = mtf.partial_pressure_to_specific_humidity(mt.es_default(T_or) * 0.820, Px)
+P = np.arange(Px, 4000.0, -500)
 
+Trhofit_ga = thermo.make_sounding_from_adiabat(P, T_ga, q_ga)
+Trhofit_or = thermo.make_sounding_from_adiabat(P, T_or, q_or)
+deltafit = Trhofit_or.Trho - Trhofit_ga.Trho.interp(altitude=Trhofit_or.altitude)
+
+T_pls = T_or+T_sig
+q_pls = mtf.partial_pressure_to_specific_humidity(mt.es_default(T_pls) * 0.820, Px)
+Trhofit_pls = thermo.make_sounding_from_adiabat(P, T_pls, q_pls)
+
+T_mns = T_ga+T_sig
+q_mns = mtf.partial_pressure_to_specific_humidity(mt.es_default(T_mns) * 0.805, Px)
+Trhofit_mns = thermo.make_sounding_from_adiabat(P, T_mns, q_mns)
+
+deltafit_pls = Trhofit_pls.Trho - Trhofit_ga.Trho.interp(altitude=Trhofit_pls.altitude)
+deltafit_mns = Trhofit_or.Trho - Trhofit_mns.Trho.interp(altitude=Trhofit_or.altitude)
+
+deltafit_mns.plot()
+deltafit_pls.plot()
+#%%
+consrv2.Trho.plot(y="altitude")
+consrv2.T.plot(y="altitude")
+pseudo2.T.plot(y="altitude")
 # %%
 # - plot profiles
 #
@@ -453,26 +481,28 @@ gs_bar.ta.plot(c=colors["gate"], ls="-", label="GATE-RS", **kwargs)
 rs_bar.ta.plot(c=colors["rapsodi"], ls="-", label="ORCESTRA-RS", **kwargs)
 bs_bar.ta.plot(c=colors["beach"], ls="-", label="ORCESTRA-DS", **kwargs)
 
-pseudo2["T"].sel(altitude=slice(0, 15300)).plot(c="grey", ls="--", **kwargs)
-consrv2["T"].sel(altitude=slice(0, 15300)).plot(c="grey", ls=":", **kwargs)
+#pseudo2["T"].sel(altitude=slice(0, 15300)).plot(c="grey", ls="--", **kwargs)
+#consrv2["T"].sel(altitude=slice(0, 15300)).plot(c="grey", ls=":", **kwargs)
+Trhofit_ga["Trho"].sel(altitude=slice(0, 15300)).plot(c="grey", ls=":", **kwargs)
+Trhofit_or["Trho"].sel(altitude=slice(0, 15300)).plot(c="grey", ls="--", **kwargs)
 
-ax[0].plot(
-    [halo_tk.quantile(0.35), halo_tk.quantile(0.65)],
-    [zbar, zbar],
-    lw=2.5,
-    c="k",
-    label="HALO",
-)
+# ax[0].plot(
+#     [halo_tk.quantile(0.35), halo_tk.quantile(0.65)],
+#     [zbar, zbar],
+#     lw=2.5,
+#     c="k",
+#     label="HALO",
+# )
 
-ax[0].plot(
-    [halo_tk.quantile(0.1), halo_tk.quantile(0.9)],
-    [zbar, zbar],
-    lw=0.5,
-    c="k",
-)
-ax[0].plot(
-    [halo_tk.quantile(0.49), halo_tk.quantile(0.51)], [zbar, zbar], lw=2.5, c="w"
-)
+# ax[0].plot(
+#     [halo_tk.quantile(0.1), halo_tk.quantile(0.9)],
+#     [zbar, zbar],
+#     lw=0.5,
+#     c="k",
+# )
+# ax[0].plot(
+#     [halo_tk.quantile(0.49), halo_tk.quantile(0.51)], [zbar, zbar], lw=2.5, c="w"
+# )
 
 # ax[0].annotate("adiabats", xy=(250, 10500), fontsize=8)
 
@@ -505,12 +535,12 @@ mtf.brunt_vaisala_frequency(gs_bar.theta, gs_bar.q, gs_bar.altitude).plot(
     c=colors["gate"], ls="-", label="GATE-RS", **kwargs
 )
 
-mtf.brunt_vaisala_frequency(pseudo2["theta"], pseudo2["q"], pseudo2["altitude"]).sel(
+mtf.brunt_vaisala_frequency(Trhofit_or["theta_rho"], Trhofit_or["q"], Trhofit_or["altitude"]).sel(
     altitude=slice(0, 15300)
-).plot(c="grey", ls="--", label="pseudo", **kwargs)
-mtf.brunt_vaisala_frequency(consrv2["theta"], consrv2["q"], consrv2["altitude"]).sel(
+).plot(c="grey", ls="--", label="orcestra-fit", **kwargs)
+mtf.brunt_vaisala_frequency(Trhofit_ga["theta_rho"], Trhofit_ga["q"], Trhofit_ga["altitude"]).sel(
     altitude=slice(0, 15300)
-).plot(c="grey", ls=":", label="reversible", **kwargs)
+).plot(c="grey", ls=":", label="gate-fit", **kwargs)
 
 nt1 = mtf.brunt_vaisala_frequency(rs_bar.theta, rs_bar.q, rs_bar.altitude).sel(
     altitude=slice(None, 5000)
@@ -542,10 +572,21 @@ delta_T_rs.plot(
 delta_T_bs.sel(altitude=slice(None, 14200)).plot(
     ax=ax[2], y="altitude", ylim=ylim, label="ORCESTRA-DS", color=colors["beach"]
 )
-
-delta_pseudo.sel(altitude=slice(0, 15300)).where(delta_pseudo > 0.1, drop=True).plot(
-    ax=ax[2], y="altitude", color="k", ls="--", lw=1
+x_bar = deltafit.sel(altitude=slice(0, 15300)).where(deltafit > 0.1, drop=True)
+x_bar.plot(
+    ax=ax[2], y="altitude", color="k", ls="-", lw=1
 )
+
+x_mns = deltafit_mns.sel(altitude=slice(0, 15300)).where(deltafit_mns > 0.1, drop=True)
+#x_mns.plot(
+#    ax=ax[2], y="altitude", color="k", ls="-", lw=0.5
+#)
+x_pls = deltafit_pls.sel(altitude=slice(0, 15300)).where(deltafit_pls > 0.1, drop=True)
+#x_pls.plot(
+#    ax=ax[2], y="altitude", color="k", ls="-", lw=0.5
+#)
+
+plt.fill_betweenx(x_mns.altitude[:-1], x_mns[:-1], x_pls[:], color=colors["orcestra"], alpha=0.2)
 # delta_consrv.where(delta_consrv > 0.1, drop=True).plot(
 #    ax=ax[2], y="altitude", color="k", ls=":", lw=1
 # )
@@ -592,7 +633,8 @@ sns.despine(ax=ax[2], offset=0)
 fig.tight_layout()
 plt.savefig("plots/sounding-new.pdf")
 plt.show()
-
+# %%
+len(x_mns)
 # %%
 # - write diagnostics
 #
