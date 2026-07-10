@@ -158,7 +158,7 @@ for key, ds in sonde_means.items():
 
 Px = set.Px
 P = set.P
-T_sig = np.sqrt(0.2896**2 + 0.427**2)
+T_sig = np.sqrt(0.315**2 + 0.4326**2)
 sfc_est = set.sfc_est
 for key in sfc_est.keys():
     sfc_est[key]["q"] = mtf.partial_pressure_to_specific_humidity(
@@ -191,8 +191,6 @@ deltafits["mns"] = adiabat_fits["orcestra"].Trho - adiabat_fits["mns"].Trho.inte
     altitude=adiabat_fits["orcestra"].altitude
 )
 
-deltafits["mns"].plot()
-deltafits["pls"].plot()
 # %%
 # - plot profiles
 #
