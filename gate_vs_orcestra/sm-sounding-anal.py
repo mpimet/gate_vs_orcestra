@@ -91,24 +91,13 @@ def adiabat(
 
 
 fpath = "/Users/m219063/work/data/orcestra/gate/aircraft"
-raf_names = [
-    "NCAR_SABRE_MEANS",
-    "NASA_CONVAIR_990_MEANS",
-    "UKHERCULES_XV208a",
-    "NOAA_US-C130_MEANS",
-    "UKHERCULES_XV208b",
-    "NCAR_ELECTRA_MEANS",
-    "DC-7_CEV",
-    "NCAR_QUEEN_AIR_MEANS",
-    "NOAA_DC-6_MEANS",
-]
 
 cpd = constants.cpd
 Rd = constants.Rd
 Rv = constants.Rv
 P0 = constants.P0
-T_min = 225.0
-T_max = 270.0
+T_min = 220.0
+T_max = 260.0
 
 cw = 190 / 25.4
 sns.set_context(context="paper")
@@ -131,7 +120,7 @@ adiabats = []
 Psfc = gs.p.mean(dim="sonde")[0].squeeze().values
 RHsfc = gs.rh.mean(dim="sonde")[0].squeeze().values
 for T in Tsfc:
-    adiabats.append(adiabat(P, T, Psfc = Psfc, RHsfc=RHsfc, integrate=False))
+    adiabats.append(adiabat(P, T, Psfc=Psfc, RHsfc=RHsfc, integrate=False))
 dx = xr.concat(adiabats, dim=xr.DataArray(Tsfc, dims="Tsfc"))
 dx["P"] = dx.P[0, :]
 dx["q"] = dx.q[:, 0]
@@ -149,7 +138,7 @@ adiabats = []
 Psfc = rs.p.mean(dim="sonde")[0].squeeze().values
 RHsfc = rs.rh.mean(dim="sonde")[0].squeeze().values
 for T in Tsfc:
-    adiabats.append(adiabat(P, T, Psfc = Psfc, RHsfc=RHsfc, integrate=False))
+    adiabats.append(adiabat(P, T, Psfc=Psfc, RHsfc=RHsfc, integrate=False))
 dx = xr.concat(adiabats, dim=xr.DataArray(Tsfc, dims="Tsfc"))
 dx["P"] = dx.P[0, :]
 dx["q"] = dx.q[:, 0]
@@ -164,8 +153,11 @@ spline82 = RectBivariateSpline(
 )
 
 spline = spline80
+
+
 def find_x(y_q, f_t, spline=spline):
     return brentq(lambda x: spline(x, y_q, grid=False) - f_t, 290, 310)
+
 
 find_x_vec = np.vectorize(find_x)
 
@@ -195,47 +187,27 @@ halo.RELHUM.where(halo.RELHUM < 70, drop=True) / 100.0
 halo_tk = halo.TS.where(halo.RELHUM < 70, drop=True)
 
 # %%
-# -- get gate aircraft data
-rafs = {}
-for raf in raf_names:
-    xx = xr.open_mfdataset(f"{fpath}/{raf}/*.nc", combine="by_coords")
-    xx = xx.squeeze().sel(time=slice("1974-08-10", None))
-    xx = (
-        xx.set_coords("lat")
-        .sortby("lat")
-        .swap_dims({"time": "lat"})
-        .sel(lat=slice(4.5, 12.5))
+# -- get and adjust gate aircrat data
+ra_dsd = {}
+for ra, ds in (dus.open_gate_ras(dus.get_cids())).items():
+    ds = (
+        ds.sel(time=slice("1974-08-10", None))
+        .squeeze()
+        .pipe(dpp.sel_percusion_E, item_var="time", lon_var="lon", lat_var="lat")
     )
-    xx = (
-        xx.set_coords("lon")
-        .sortby("lon")
-        .swap_dims({"lat": "lon"})
-        .sel(lon=slice(-34, -20))
-    )
-    rafs[raf] = xx.swap_dims({"lon": "time"})
-# %%
-print(
-    len(pd.to_datetime(halo.TIME.values).normalize().unique()),
-    halo.PS.max().values,
-    halo.PS.min().values,
-)
-# %%
-# -- inspect aircraft data
-raf_xx = {}
-for raf, ds in rafs.items():
     mask = ds.ta < T_max
     p_vals = ds.p.where(mask.compute(), drop=True).values
     ta_vals = ds.ta.where(mask.compute(), drop=True).values
     if ds.ta.min() < T_max:
         unique_days = pd.to_datetime(ds.time.values).normalize().unique()
-        raf_xx[raf] = {}
-        raf_xx[raf]["flights"] = []
-        raf_xx[raf]["ds"] = ds
+        ra_dsd[ra] = {}
+        ra_dsd[ra]["flights"] = []
+        ra_dsd[ra]["ds"] = ds
         for day in sorted(unique_days):
             dx = ds.sel(time=f"{day:%Y-%m-%d}")
             if dx.ta.min() < T_max:
-                raf_xx[raf]["flights"].append(f"{day:%Y-%m-%d}")
-        print(f"\n{raf}: {len(raf_xx[raf]['flights'])} flights")
+                ra_dsd[ra]["flights"].append(f"{day:%Y-%m-%d}")
+        print(f"\n{ra}: {len(ra_dsd[ra]['flights'])} flights")
         print(
             f"  Min lat {ds.lat.min().values:.1f} degN, min temperature {ta_vals.min():.1f} K"
         )
@@ -248,20 +220,20 @@ for raf, ds in rafs.items():
 
 # %%
 # -- plot flight time versus latitude
-for raf in raf_xx.keys():
-    da = raf_xx[raf]["ds"].lat.groupby("time.hour").mean()
-    da.plot.scatter(label=raf, s=50)
+for ra in ra_dsd.keys():
+    da = ra_dsd[ra]["ds"].lat.groupby("time.hour").mean()
+    da.plot.scatter(label=ra, s=50)
 plt.legend()
 sns.despine(offset=10)
 
 # %%
 # -- get moist adiabats
 xx = np.asarray([])
-for raf in raf_xx.keys():
-    ds = raf_xx[raf]["ds"]
+for ra in ra_dsd.keys():
+    ds = ra_dsd[ra]["ds"]
     X1 = []
     X2 = []
-    for flight in raf_xx[raf]["flights"]:
+    for flight in ra_dsd[ra]["flights"]:
         dx = ds.sel(time=f"{flight}")
         mask = dx.ta < T_max
         p_vals = dx.p.where(mask.compute(), drop=True).values
@@ -272,8 +244,8 @@ for raf in raf_xx.keys():
             X2.append(np.mean(p_vals))
         except:
             pass
-    raf_xx[raf]["T_sfc"] = np.asarray(X1)
-    raf_xx[raf]["P"] = np.asarray(X2)
+    ra_dsd[ra]["T_sfc"] = np.asarray(X1)
+    ra_dsd[ra]["P"] = np.asarray(X2)
 
 # %%
 # -- compare to individual soundings
@@ -283,19 +255,19 @@ norm = Normalize(vmin=0, vmax=24)  # hours in a day
 ncols = 3
 H1 = 11
 H2 = 18
-for raf in raf_xx.keys():
-    nrows = int(np.ceil(len(raf_xx[raf]["flights"]) / ncols))
+for ra in ra_dsd.keys():
+    nrows = int(np.ceil(len(ra_dsd[ra]["flights"]) / ncols))
     fig, axs = plt.subplots(nrows, ncols, figsize=(cw, cw / 6 * nrows))
-    ds = raf_xx[raf]
+    ds = ra_dsd[ra]
     nax = 0
-    for flight in raf_xx[raf]["flights"]:
+    for flight in ra_dsd[ra]["flights"]:
         nrow = int(nax / ncols)
         ncol = nax % ncols
-        if len(raf_xx[raf]["flights"]) > len(axs):
+        if len(ra_dsd[ra]["flights"]) > len(axs):
             ax = axs[nrow, ncol]
         else:
             ax = axs[ncol]
-        dx = raf_xx[raf]["ds"].sel(time=f"{flight}")
+        dx = ra_dsd[ra]["ds"].sel(time=f"{flight}")
         mask = dx.ta < T_max
         p_vals = dx.p.where(mask.compute(), drop=True).values
         ta_vals = dx.ta.where(mask.compute(), drop=True).values
@@ -320,18 +292,18 @@ for raf in raf_xx.keys():
         ax.set_title(flight)
 
     fig.tight_layout()
-    fig.savefig(f"plots/{raf}_night.pdf")
+    fig.savefig(f"plots/{ra}_night.pdf")
     plt.show()
 
 # %%
-# -- compare to individual soundings
+# -- histogram of temperature differences with mean sounding
 
 ticks = []
-for raf in raf_xx.keys():
-    ds = raf_xx[raf]
+for ra in ra_dsd.keys():
+    ds = ra_dsd[ra]
     tdiff = np.asarray([])
-    for flight in raf_xx[raf]["flights"]:
-        dx = raf_xx[raf]["ds"].sel(time=f"{flight}")
+    for flight in ra_dsd[ra]["flights"]:
+        dx = ra_dsd[ra]["ds"].sel(time=f"{flight}")
         mask = dx.ta < T_max
         p_vals = dx.p.where(mask.compute(), drop=True).values
         if len(p_vals) > 2:
@@ -341,19 +313,21 @@ for raf in raf_xx.keys():
                 .mean(dim="launch_time")
             )
             # gx = gs.swap_dims({"sonde":"launch_time"}).sel(launch_time=f"{flight}").mean(dim='launch_time')
-            gx_bar_ta = (
-                gx.where(~np.isnan(gx.p), drop=True)
-                .set_coords("p")
-                .swap_dims({"altitude": "p"})
-                .interp(p=p_vals)
-                .ta
-            )
-            tdiff = np.concatenate(
-                [tdiff, dx.ta.where(mask.compute(), drop=True).values - gx_bar_ta]
-            )
-    plt.hist(
-        tdiff, alpha=0.3, label=raf[0 : raf.find("_M")] + f" {H1}-{H2} UTC", bins=30
-    )
+            try:
+                gx_bar_ta = (
+                    gx.where(~np.isnan(gx.p), drop=True)
+                    .set_coords("p")
+                    .swap_dims({"altitude": "p"})
+                    .interp(p=p_vals)
+                    .ta
+                )
+                tdiff = np.concatenate(
+                    [tdiff, dx.ta.where(mask.compute(), drop=True).values - gx_bar_ta]
+                )
+            except:
+                print(f"no valid values for {ra} on {flight}")
+
+    plt.hist(tdiff, alpha=0.3, label=ra[0 : ra.find("_M")] + f" {H1}-{H2} UTC", bins=30)
     ticks.append(np.median(tdiff))
 
 sns.despine(offset=10)
@@ -409,10 +383,10 @@ plt.legend()
 # -- histogram of moist adiabats
 ticks = []
 X1 = np.asarray([])
-for raf in raf_xx.keys():
-    ds = raf_xx[raf]
-    for flight in raf_xx[raf]["flights"]:
-        dx = raf_xx[raf]["ds"].sel(time=f"{flight}")
+for ra in ra_dsd.keys():
+    ds = ra_dsd[ra]
+    for flight in ra_dsd[ra]["flights"]:
+        dx = ra_dsd[ra]["ds"].sel(time=f"{flight}")
         mask = dx.ta < T_max
         p_vals = dx.p.where(mask.compute(), drop=True).values
         ta_vals = dx.ta.where(mask.compute(), drop=True).values
@@ -464,12 +438,12 @@ for dataset in datasets.keys():
     spline = spline82
     if dataset.find("gate") != -1:
         spline = spline80
-        print (f"computing {dataset} with spline 80")
+        print(f"computing {dataset} with spline 80")
 
     for sonde in np.arange(0, sondes["sonde"].size, 1):
         xs = sondes.sel(sonde=sonde)
 
-        mask = (xs.ta > T_min) & (xs.ta < T_max) & (xs.p > 10000.)
+        mask = (xs.ta > T_min) & (xs.ta < T_max) & (xs.p > 10000.0)
         p_vals = xs.p.where(mask, drop=True).values
         ta_vals = xs.ta.where(mask, drop=True).values
 
@@ -481,7 +455,7 @@ for dataset in datasets.keys():
             datasets[dataset]["ta"] = np.concatenate([datasets[dataset]["ta"], ta_vals])
 
         except:
-            print (f"excluding sonde {sonde}, {len(p_vals)}, {len(ta_vals)}")
+            print(f"excluding sonde {sonde}, {len(p_vals)}, {len(ta_vals)}")
             datasets[dataset]["exclude"].append(sonde)
 
     datasets[dataset]["Tsfc_avg"] = np.asarray(T1)
@@ -513,12 +487,12 @@ for dataset in datasets.keys():
 tick1 = np.median(datasets["gate"]["Tsfc_avg"]).round(2)
 tick2 = np.median(datasets["rapsodi"]["Tsfc_avg"]).round(2)
 tick3 = np.median(datasets["beach"]["Tsfc_avg"]).round(2)
-print (np.std(datasets["rapsodi"]["Tsfc_avg"]).round(4))
-print (np.std(datasets["gate"]["Tsfc_avg"]).round(4))
+print(np.std(datasets["rapsodi"]["Tsfc_avg"]).round(4))
+print(np.std(datasets["gate"]["Tsfc_avg"]).round(4))
 axs[0].set_xticks([tick1, tick2])
 axs[0].set_xticks([tick3], minor=True)
-axs[0].set_yticks([0, 0.5, 1, 1.5])
-axs[0].set_ylim(0, 1.7)
+axs[0].set_yticks([0, 1, 2])
+axs[0].set_ylim(0, 2.1)
 axs[0].set_xlim(297.5, 301.5)
 axs[0].legend(ncol=2, fontsize=8, bbox_to_anchor=(0.5, 1.0), loc="upper right")
 
@@ -543,17 +517,16 @@ axs[1].legend(ncol=1, fontsize=8, bbox_to_anchor=(1.05, 1.0), loc="upper right")
 sns.despine(offset=10)
 fig.tight_layout()
 plt.savefig("plots/moist-adiabats.pdf")
-# %%
-datasets["rapsodi"]
+
 # %%
 # -- moist adiabatic analysis as scatter plot
 
 fig, ax = plt.subplots(1, 1, figsize=(cw / 2, cw / 2))
 
-for dataset in ["gate","rapsodi","beach"]:
+for dataset in ["gate", "rapsodi", "beach"]:
     try:
         color = colors[dataset]
-        if (dataset=="gate") :
+        if dataset == "gate":
             alpha = 0.005
         else:
             alpha = 0.01
@@ -561,7 +534,7 @@ for dataset in ["gate","rapsodi","beach"]:
             datasets[dataset]["tma"],
             datasets[dataset]["ta"],
             label=dataset,
-            edgecolors='none',
+            edgecolors="none",
             facecolors=color,
             alpha=alpha,
             s=2,
@@ -569,11 +542,12 @@ for dataset in ["gate","rapsodi","beach"]:
     except:
         print(f"not plotting {dataset}")
 
-plt.hlines([210,260],xmin=296, xmax=302, color="k", ls=":")
-plt.gca().set_xlabel("$T_*$ / K")
-plt.gca().set_ylabel("$T$ / K")
-plt.gca().set_xlim(296.5, 301.5)
-plt.gca().invert_yaxis()
+ax.hlines([220, 260], xmin=296, xmax=302, color="k", ls=":")
+ax.set_xlabel("$T_*$ / K")
+ax.set_ylabel("$T$ / K")
+ax.set_xlim(296.5, 301.5)
+ax.invert_yaxis()
+
 sns.despine(offset=10)
 fig.tight_layout()
 
