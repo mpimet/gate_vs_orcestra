@@ -12,6 +12,8 @@ import utilities.preprocessing as pp
 import utilities.modify_ds as md
 from utilities.settings_and_colors import colors  # noqa
 
+es = svp.liq_wagner_pruss
+
 # %%
 cids = dus.get_cids()
 datasets = {
@@ -163,17 +165,39 @@ for name, ds in iwv.items():
     iwv[name] = calc_iwv(ds)
 
 # %%
-P = np.arange(100900.0, 4000.0, -500)
+P = np.arange(101000.0, 4000.0, -500)
+sfc_vals = {}
+for sset in ["gate", "rapsodi", "beach", "orcestra"]:
+    xs = iwv[sset]
+    P_sfc = xs.p.sel(altitude=slice(10, 50)).max(dim="altitude") + 100
+    RH_sfc = xs.rh.sel(altitude=slice(0, 50)).max(dim="altitude")
+    T_sfc = mtf.theta2T(
+        xs.theta.sel(altitude=slice(None, 400)).mean(dim="altitude"), P_sfc
+    )
+    q_sfc = mtf.partial_pressure_to_specific_humidity(RH_sfc * es(T_sfc), P_sfc)
+    sfc_vals[sset] = {
+        "P": P_sfc.median(),
+        "RH": RH_sfc.median(),
+        "T": T_sfc.median(),
+        "q": q_sfc.median(),
+    }
+    print(
+        f"{sset:10s}: RH = {RH_sfc.median().values:.3f}, T = {T_sfc.median().values:.2f} K, P = {P_sfc.median().values / 100:.1f} hPa"
+    )
 
-orc_sfc = iwv["orcestra"].sel(altitude=slice(0, 50)).mean()
-gate_sfc = iwv["gate"].sel(altitude=slice(0, 50)).mean()
-
+# %%
 orc_pseudo = thermo.make_sounding_from_adiabat(
-    P, orc_sfc.ta.values, orc_sfc.q.values, thx=mtf.theta_e_bolton
+    P,
+    sfc_vals["orcestra"]["T"].values,
+    sfc_vals["orcestra"]["q"].values,
+    thx=mtf.theta_e_bolton,
 ).rename({"T": "ta", "P": "p"})
 orc_pseudo = orc_pseudo.where(orc_pseudo.ta > 200, drop=True)
 gate_pseudo = thermo.make_sounding_from_adiabat(
-    P, gate_sfc.ta.values, gate_sfc.q.values, thx=mtf.theta_e_bolton
+    P,
+    sfc_vals["gate"]["T"].values,
+    sfc_vals["gate"]["q"].values,
+    thx=mtf.theta_e_bolton,
 ).rename({"T": "ta", "P": "p"})
 gate_pseudo = gate_pseudo.where(gate_pseudo.ta > 200, drop=True)
 

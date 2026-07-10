@@ -24,6 +24,7 @@ dependencies = [
     "numpy",
     "pandas",
     "pip",
+    "pydropsonde",
     "pytest",
     "requests",
     "ruff",
