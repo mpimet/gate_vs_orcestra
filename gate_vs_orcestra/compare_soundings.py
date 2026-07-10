@@ -4,7 +4,8 @@
 import utilities.data_utils as dus
 import utilities.preprocessing as dpp
 import utilities.modify_ds as md
-from utilities.settings_and_colors import colors
+import utilities.settings_and_colors as set
+
 
 import xarray as xr
 import matplotlib.pyplot as plt
@@ -80,14 +81,6 @@ halo_rh = halo.RELHUM.where(halo.RELHUM < 70, drop=True) / 100.0
 halo_tk = halo.TS.where(halo.RELHUM < 70, drop=True)
 x = hal.swap_dims({"altitude": "TIME"})
 zbar = x.altitude.mean().values
-# %%
-# - parameters for soundings
-#
-sfc_vals = {key: md.get_surface(ds, es) for key, ds in sondes.items()}
-for key, ds in sondes.items():
-    print(
-        f"{key:10s}: RH = {sfc_vals[key]['RH']:.3f}, T = {sfc_vals[key]['T']:.2f} K, P = {sfc_vals[key]['P'] / 100:.1f} hPa"
-    )
 
 # %%
 # - zero-degree isotherms
@@ -132,7 +125,7 @@ for key in keys:
     )
 
     z_cp.plot.hist(
-        bins=50, density=True, xlim=(14000, 19000), color=colors[key], alpha=0.5
+        bins=50, density=True, xlim=(14000, 19000), color=set.colors[key], alpha=0.5
     )
 
     cp_ticks[key] = z_cp.median().values
@@ -158,33 +151,20 @@ for key, ds in sonde_means.items():
     ct_ticks[key] = z_ct.values
     print(f" {key}: z at convective top: {z_ct.values:.2f} m ")
 
-# %%
-# - create theoretical soundings
-#
-Px = 100900.0
-P = np.arange(Px, 4000.0, -500)
 
 # %%
 # - create theoretical soundings from fits to upper atmosphere
 #
+
+Px = set.Px
+P = set.P
 T_sig = np.sqrt(0.2896**2 + 0.427**2)
-sfc_est = {
-    "gate": {
-        "T": 298.54,  # 0.1116,
-        "RH": 0.805,
-    },
-    "orcestra": {
-        "T": 299.74,  # 0.0819,
-        "RH": 0.820,
-    },
-}
+sfc_est = set.sfc_est
 for key in sfc_est.keys():
     sfc_est[key]["q"] = mtf.partial_pressure_to_specific_humidity(
         svp.es_default(sfc_est[key]["T"]) * sfc_est[key]["RH"], Px
     )
 
-Px = 101275.0
-P = np.arange(Px, 4000.0, -500)
 adiabat_fits = {
     key: thermo.make_sounding_from_adiabat(P, sfc_est[key]["T"], sfc_est[key]["q"])
     for key in sfc_est.keys()
@@ -237,7 +217,7 @@ for key, label in [
     ("gate", "GATE-RS"),
     ("beach", "ORCESTRA-DS"),
 ]:
-    sonde_means[key].ta.plot(c=colors[key], ls="-", label=label, **kwargs)
+    sonde_means[key].ta.plot(c=set.colors[key], ls="-", label=label, **kwargs)
 
 
 for key, ls in [("orcestra", "--"), ("gate", ":")]:
@@ -272,7 +252,7 @@ for key, label in [
     ("beach", "ORCESTRA-DS"),
 ]:
     sonde_means[key].sel(altitude=slice(20, 15300)).n2.plot(
-        c=colors[key], ls="-", label=label, **kwargs
+        c=set.colors[key], ls="-", label=label, **kwargs
     )
 
 for key, ls in [("orcestra", "--"), ("gate", ":")]:
@@ -284,7 +264,7 @@ for key, ls in [("orcestra", "--"), ("gate", ":")]:
 
 for x in ["rapsodi", "gate"]:
     print(ct_ticks[x])
-    ax[1].axhline(ct_ticks[x], xmin=0.5, xmax=0.8, lw=1, ls=":", c=colors[x])
+    ax[1].axhline(ct_ticks[x], xmin=0.5, xmax=0.8, lw=1, ls=":", c=set.colors[x])
 
 ax[1].annotate(
     "$z_1$",
@@ -311,10 +291,10 @@ sns.despine(ax=ax[1], offset={"bottom": 0, "left": 10})
 rs_tdiff = sonde_means["rapsodi"].ta - sonde_means["gate"].ta
 ds_tdiff = sonde_means["beach"].ta - sonde_means["gate"].ta
 rs_tdiff.plot(
-    ax=ax[2], y="altitude", ylim=ylim, label="ORCESTRA-RS", color=colors["rapsodi"]
+    ax=ax[2], y="altitude", ylim=ylim, label="ORCESTRA-RS", color=set.colors["rapsodi"]
 )
 ds_tdiff.sel(altitude=slice(None, 14200)).plot(
-    ax=ax[2], y="altitude", ylim=ylim, label="ORCESTRA-DS", color=colors["beach"]
+    ax=ax[2], y="altitude", ylim=ylim, label="ORCESTRA-DS", color=set.colors["beach"]
 )
 
 altslice = slice(0, 15300)
@@ -326,7 +306,7 @@ ax[2].fill_betweenx(
     deltafits["mns"].sel(altitude=altslice).altitude[:-1],
     deltafits["mns"].sel(altitude=altslice)[:-1],
     deltafits["pls"].sel(altitude=altslice),
-    color=colors["orcestra"],
+    color=set.colors["orcestra"],
     alpha=0.2,
 )
 ax[2].axvline(0, color="grey", lw=0.5, ls="--")
@@ -354,8 +334,8 @@ ax[2].set_yticks(np.arange(0, 21500, 3000))
 ax[2].set_yticklabels([0, 3, 6, 9, 12, 15, 18, 21])
 ax[2].set_yticks([z_T0_gate.quantile(0.5), z_T0.quantile(0.5)], minor=True)
 for x in ["rapsodi", "gate"]:
-    ax[0].axhline(cp_ticks[x], xmin=0.05, xmax=0.3, lw=1, ls=":", c=colors[x])
-    ax[2].hlines(zp_ticks[x], xmin=-1.0, xmax=3, lw=1, ls=":", color=colors[x])
+    ax[0].axhline(cp_ticks[x], xmin=0.05, xmax=0.3, lw=1, ls=":", c=set.colors[x])
+    ax[2].hlines(zp_ticks[x], xmin=-1.0, xmax=3, lw=1, ls=":", color=set.colors[x])
 
 sns.despine(ax=ax[2], offset=0)
 fig.tight_layout()
@@ -418,13 +398,13 @@ sns.set_context("paper")
 fig, ax = plt.subplots(1, 3, figsize=(10, 3))
 for name, ds in [("gate", gate), ("rapsodi", rapsodi), ("beach", beach)]:
     ds["theta"].sel(altitude=slice(0, 300)).plot.hist(
-        ax=ax[0], range=thetabinrange, color=colors[name], **kwargs
+        ax=ax[0], range=thetabinrange, color=set.colors[name], **kwargs
     )
     ds["rh"].sel(altitude=slice(10, 100)).plot.hist(
-        ax=ax[1], range=rhbinrange, color=colors[name], **kwargs
+        ax=ax[1], range=rhbinrange, color=set.colors[name], **kwargs
     )
     ds["p"].sel(altitude=slice(10, 50)).plot.hist(
-        ax=ax[2], range=pbinrange, color=colors[name], **kwargs
+        ax=ax[2], range=pbinrange, color=set.colors[name], **kwargs
     )
 
 
@@ -496,12 +476,12 @@ fig, ax = plt.subplots(1, 2, figsize=(5, 3), sharey=True)
 
 for key in ["beach", "rapsodi"]:
     difftheta = sondes_gateA[key].theta - sonde_means[key].theta
-    difftheta.plot(ax=ax[0], y="altitude", ylim=ylim, label=key, c=colors[key])
+    difftheta.plot(ax=ax[0], y="altitude", ylim=ylim, label=key, c=set.colors[key])
     print(
         f"diff {key} theta: {difftheta.sel(altitude=slice(0, 14000)).mean().values:.2f}"
     )
     diffu = sondes_gateA[key].u - sonde_means[key].u
-    diffu.plot(ax=ax[1], y="altitude", ylim=ylim, label=key, c=colors[key])
+    diffu.plot(ax=ax[1], y="altitude", ylim=ylim, label=key, c=set.colors[key])
     print(f"diff {key} u: {diffu.sel(altitude=slice(0, 14000)).mean().values:.2f}")
 
 ax[0].set_ylim(0, 14300)
@@ -537,7 +517,7 @@ nlim = (0, 0.02)
 rlim = (0, 1)
 for key in ["rapsodi", "beach", "gate"]:
     sonde_means[key].theta.plot(
-        ax=ax, y="altitude", ylim=ylim, xlim=tlim, label=key, color=colors[key]
+        ax=ax, y="altitude", ylim=ylim, xlim=tlim, label=key, color=set.colors[key]
     )
 
 ax.set_xlabel("$\\theta$ / K")
@@ -552,8 +532,8 @@ plt.savefig("plots/theta.pdf")
 sns.set_context(context="paper")
 fig, ax = plt.subplots(1, 2, figsize=(5, 3), sharey=True)
 for key in ["rapsodi", "beach", "gate"]:
-    sonde_means[key].u.plot(ax=ax[0], y="altitude", label=key, color=colors[key])
-    sonde_means[key].v.plot(ax=ax[1], y="altitude", label=key, color=colors[key])
+    sonde_means[key].u.plot(ax=ax[0], y="altitude", label=key, color=set.colors[key])
+    sonde_means[key].v.plot(ax=ax[1], y="altitude", label=key, color=set.colors[key])
 
 
 ax[0].axvline(x=0.0, ls=":", lw=1)
