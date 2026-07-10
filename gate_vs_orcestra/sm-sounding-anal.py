@@ -242,8 +242,8 @@ for ra in ra_dsd.keys():
             xx = np.concatenate([find_x_vec(p_vals, ta_vals, spline=spline80), xx])
             X1.append(np.mean(xx))
             X2.append(np.mean(p_vals))
-        except:
-            pass
+        except Exception as e:
+            print(f"Error: {e}")
     ra_dsd[ra]["T_sfc"] = np.asarray(X1)
     ra_dsd[ra]["P"] = np.asarray(X2)
 
@@ -324,8 +324,8 @@ for ra in ra_dsd.keys():
                 tdiff = np.concatenate(
                     [tdiff, dx.ta.where(mask.compute(), drop=True).values - gx_bar_ta]
                 )
-            except:
-                print(f"no valid values for {ra} on {flight}")
+            except Exception as e:
+                print(f"Error: {e} -- no valid values for {ra} on {flight}")
 
     plt.hist(tdiff, alpha=0.3, label=ra[0 : ra.find("_M")] + f" {H1}-{H2} UTC", bins=30)
     ticks.append(np.median(tdiff))
@@ -392,8 +392,9 @@ for ra in ra_dsd.keys():
         ta_vals = dx.ta.where(mask.compute(), drop=True).values
         try:
             X1 = np.concatenate([X1, find_x_vec(p_vals, ta_vals, spline=spline80)])
-        except:
-            pass
+        except Exception as e:
+            print(f"Error: {e}")
+
 sns.kdeplot(X1, label="GATE Aircraft", color=colors["gate"], ax=ax)
 ticks.append(np.median(X1))
 
@@ -408,8 +409,8 @@ for flight in intersection:
     if len(p_vals) > 2:
         try:
             X2 = np.concatenate([X2, find_x_vec(p_vals, ta_vals, spline=spline82)])
-        except:
-            pass
+        except Exception as e:
+            print(f"Error: {e}")
 ticks.append(np.median(X1))
 ticks.append(np.median(X2))
 
@@ -428,7 +429,7 @@ for dataset in datasets.keys():
     sondes = datasets[dataset]["sondes"]
 
     if dataset.find("day") != -1:
-        mask = (sondes.launch_time.dt.hour >= 10) & (xs.launch_time.dt.hour < 20)
+        mask = (sondes.launch_time.dt.hour >= 10) & (sondes.launch_time.dt.hour < 20)
         sondes = sondes.where(mask, drop=True)
     T1 = []
     T2 = []
@@ -453,9 +454,10 @@ for dataset in datasets.keys():
             T2.append(np.std(xx))
             datasets[dataset]["tma"] = np.concatenate([datasets[dataset]["tma"], xx])
             datasets[dataset]["ta"] = np.concatenate([datasets[dataset]["ta"], ta_vals])
-
-        except:
-            print(f"excluding sonde {sonde}, {len(p_vals)}, {len(ta_vals)}")
+        except Exception as e:
+            print(
+                f"Error: {e} -- excluding sonde {sonde}, {len(p_vals)}, {len(ta_vals)}"
+            )
             datasets[dataset]["exclude"].append(sonde)
 
     datasets[dataset]["Tsfc_avg"] = np.asarray(T1)
@@ -503,7 +505,7 @@ ticks = [np.median(X1).round(2), np.median(X2).round(2)]
 print(f"Temperature difference of moist adiabats {np.median(X1) - np.median(X2):.2f} K")
 
 axs[1].set_ylabel("density")
-axs[1].set_xlabel("Moist Adiabat / K")
+axs[1].set_xlabel("$T_*$ / K")
 
 axs[1].set_ylim(0.0, 1.4)
 axs[1].set_xticks(ticks)
@@ -539,8 +541,8 @@ for dataset in ["gate", "rapsodi", "beach"]:
             alpha=alpha,
             s=2,
         )
-    except:
-        print(f"not plotting {dataset}")
+    except Exception as e:
+        print(f"Error: {e} -- not plotting {dataset}")
 
 ax.hlines([220, 260], xmin=296, xmax=302, color="k", ls=":")
 ax.set_xlabel("$T_*$ / K")
@@ -551,7 +553,7 @@ ax.invert_yaxis()
 sns.despine(offset=10)
 fig.tight_layout()
 
-fig.savefig(f"plots/fits-scatter.png")
+fig.savefig("plots/fits-scatter.png")
 
 # %%
 # -- document timing of radiosondes to address reviewer question
@@ -596,6 +598,6 @@ ax.set_xlabel("$T$ / hPa")
 plt.legend(fontsize=8)
 fig.tight_layout()
 
-fig.savefig(f"plots/flight-dropsonde-temperature.pdf")
+fig.savefig("plots/flight-dropsonde-temperature.pdf")
 
 # %%
