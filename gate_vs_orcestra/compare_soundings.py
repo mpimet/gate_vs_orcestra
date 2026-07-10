@@ -406,67 +406,81 @@ gp.interp(P=pgrid).altitude.values
 # %%
 # - look at distributions
 #
+kwargs = {
+    "bins": 300,
+    "density": True,
+    "alpha": 0.4,
+}
+thetabinrange = (294, 304)
+rhbinrange = (0.5, 1.1)
+pbinrange = (100000, 102000)
 sns.set_context("paper")
 fig, ax = plt.subplots(1, 3, figsize=(10, 3))
+for name, ds in [("gate", gate), ("rapsodi", rapsodi), ("beach", beach)]:
+    ds["theta"].sel(altitude=slice(0, 300)).plot.hist(
+        ax=ax[0], range=thetabinrange, color=colors[name], **kwargs
+    )
+    ds["rh"].sel(altitude=slice(10, 100)).plot.hist(
+        ax=ax[1], range=rhbinrange, color=colors[name], **kwargs
+    )
+    ds["p"].sel(altitude=slice(10, 50)).plot.hist(
+        ax=ax[2], range=pbinrange, color=colors[name], **kwargs
+    )
 
-gate["theta"].sel(altitude=slice(0, 300)).plot.hist(
-    ax=ax[0], bins=300, alpha=0.4, density=True, color=colors["gate"]
-)
 
-rapsodi["theta"].sel(altitude=slice(0, 300)).plot.hist(
-    ax=ax[0], bins=30, alpha=0.4, density=True, color=colors["rapsodi"]
-)
-
-beach["theta"].sel(altitude=slice(0, 300)).plot.hist(
-    ax=ax[0], bins=30, alpha=0.4, density=True, color=colors["beach"]
-)
-
-ax[0].set_xlim(294, 304)
 ax[0].set_xlabel("$\\theta_\\mathrm{bl}$ / K")
-
-x1 = (
-    rapsodi["theta"]
-    .sel(altitude=slice(0, 500))
-    .stack(points=["sonde", "altitude"])
-    .quantile(0.5)
-    .values
-)
-x2 = (
-    gate["theta"]
-    .sel(altitude=slice(0, 500))
-    .stack(points=["sonde", "altitude"])
-    .quantile(0.5)
-    .values
+ax[0].set_xlim(thetabinrange)
+ax[0].set_xticks(
+    [
+        np.round(ds["theta"].sel(altitude=slice(0, 500)).median().values, 2)
+        for ds in [gate, rapsodi]
+    ]
 )
 
-ax[0].set_xticks([np.round(x1, 2), np.round(x2, 2)])
 
-gate["rh"].sel(altitude=slice(10, 100)).plot.hist(
-    ax=ax[1], bins=300, alpha=0.4, density=True, color=colors["gate"]
-)
-rapsodi["rh"].sel(altitude=slice(10, 100)).plot.hist(
-    ax=ax[1], bins=30, alpha=0.4, density=True, color=colors["rapsodi"]
-)
-beach["rh"].sel(altitude=slice(10, 100)).plot.hist(
-    ax=ax[1], bins=30, alpha=0.4, density=True, color=colors["beach"]
-)
-ax[1].set_xlim(0.5, 1.1)
 ax[1].set_xlabel("RH$_\\mathrm{sfc}$ / $-$")
+ax[1].set_xlim(rhbinrange)
+ax[1].set_xticks(
+    [
+        0.75,
+        np.round(
+            np.mean(
+                [
+                    ds["rh"].sel(altitude=slice(0, 50)).median().values
+                    for ds in [gate, rapsodi]
+                ]
+            ),
+            2,
+        ),
+        0.9,
+    ]
+)
 
-x1 = (
-    rapsodi["rh"]
-    .sel(altitude=slice(0, 50))
-    .stack(points=["sonde", "altitude"])
-    .quantile(0.5)
-    .values
+ax[2].set_xlabel("$p_\\mathrm{sfc}$ / $-$")
+ax[2].set_xlim(pbinrange)
+ax[2].set_xticks(
+    [
+        100000,
+        np.round(
+            np.mean(
+                [
+                    ds["p"].sel(altitude=slice(10, 50)).median().values
+                    for ds in [gate, rapsodi]
+                ]
+            ),
+            2,
+        ),
+        102000,
+    ]
 )
-x2 = (
-    gate["rh"]
-    .sel(altitude=slice(0, 50))
-    .stack(points=["sonde", "altitude"])
-    .quantile(0.5)
-    .values
-)
+
+
+sns.despine(offset=10)
+fig.tight_layout()
+
+# %% additonal analysis
+# -- plot difference depending on domain
+#
 
 ax[1].set_xticks([0.75, np.round((x1 + x2) / 2, 2), 0.9])
 
