@@ -94,7 +94,7 @@ for key, ds in sondes.items():
 #
 print("Height of 0˚ isotherm:")
 zp_ticks = {}
-for key, ds in datasets.items():
+for key, ds in sondes.items():
     Tx = (ds.ta - mtc.T0) ** 2
     z_T0 = Tx.idxmin(dim="altitude")
     if ds.title[0] == "G":
@@ -104,18 +104,18 @@ for key, ds in datasets.items():
     )
     zp_ticks[key] = z_T0.median().values
 
-zp_ticks
 
 # %%
 # - cold point
 #
-datasets = {"rapsodi": rs_PE, "gate": gs_PE}
+keys = ["rapsodi", "gate"]
 sns.set_context(context="paper")
 fig, ax = plt.subplots(1, 1, figsize=(3, 2), sharey=True)
 
 print("Height and temerature of cold point:")
 cp_ticks = {}
-for key, ds in datasets.items():
+for key in keys:
+    ds = sondes[key]
     mask = (
         ds["ta"].sel(altitude=slice(18000, None)).count(dim="altitude") > 1
     ).compute()
@@ -138,20 +138,19 @@ for key, ds in datasets.items():
     cp_ticks[key] = z_cp.median().values
 ax.set_xlabel("z / m")
 sns.despine(offset=10)
+# %%
 
-Tx = rs_bar.ta
+Tx = sonde_means["rapsodi"].ta
 RHice = svp.ice_wagner_etal(Tx) / svp.liq_wagner_pruss(Tx)
 # %%
 # - convective top
-#
-datasets = {"rapsodi": rs_bar, "beach": bs_bar, "gate": gs_bar}
+
 
 ct_ticks = {}
 print("Height and temerature of convective top:")
-for key, ds in datasets.items():
+for key, ds in sonde_means.items():
     z_ct = (
-        mtf.brunt_vaisala_frequency(ds.theta, ds.q, ds.altitude)
-        .sel(altitude=slice(5e3, 15e3))
+        ds.n2.sel(altitude=slice(5e3, 13e3))
         .coarsen(altitude=2, boundary="trim")
         .mean()
         .idxmin(dim="altitude")
