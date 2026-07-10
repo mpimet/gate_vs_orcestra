@@ -164,291 +164,57 @@ for key, ds in sonde_means.items():
 Px = 100900.0
 P = np.arange(Px, 4000.0, -500)
 
-T1 = sfc_vals["gate"]["T"].values
-RHx = sfc_vals["gate"]["RH"].values
-q1 = mtf.partial_pressure_to_specific_humidity(RHx * es(T1), Px)
-
-T2 = sfc_vals["rapsodi"]["T"].values
-RHx = sfc_vals["gate"]["RH"].values
-q2 = mtf.partial_pressure_to_specific_humidity(RHx * es(T2), Px)
-
-pseudo1 = thermo.make_sounding_from_adiabat(P, T1, q1, thx=mtf.theta_e_bolton, Tmin=195)
-pseudo2 = thermo.make_sounding_from_adiabat(P, T2, q2, thx=mtf.theta_e_bolton, Tmin=195)
-consrv2 = thermo.make_sounding_from_adiabat(P, T2, q2)
-consrv1 = thermo.make_sounding_from_adiabat(P, T1, q1)
-
-zz = np.arange(0, 15000, 10)
-delta_pseudo = pseudo2.T - pseudo1.T.interp(altitude=pseudo2.altitude)
-delta_consrv = consrv2.T - consrv1.T.interp(altitude=consrv2.altitude)
-
 # %%
 # - create theoretical soundings from fits to upper atmosphere
 #
 T_sig = np.sqrt(0.2896**2 + 0.427**2)
+sfc_est = {
+    "gate": {
+        "T": 298.54,  # 0.1116,
+        "RH": 0.805,
+    },
+    "orcestra": {
+        "T": 299.74,  # 0.0819,
+        "RH": 0.820,
+    },
+}
+for key in sfc_est.keys():
+    sfc_est[key]["q"] = mtf.partial_pressure_to_specific_humidity(
+        svp.es_default(sfc_est[key]["T"]) * sfc_est[key]["RH"], Px
+    )
+
 Px = 101275.0
-T_ga = 298.54 #0.1116
-T_or = 299.74 #0.0819
-q_ga = mtf.partial_pressure_to_specific_humidity(mt.es_default(T_ga) * 0.805, Px)
-q_or = mtf.partial_pressure_to_specific_humidity(mt.es_default(T_or) * 0.820, Px)
 P = np.arange(Px, 4000.0, -500)
+adiabat_fits = {
+    key: thermo.make_sounding_from_adiabat(P, sfc_est[key]["T"], sfc_est[key]["q"])
+    for key in sfc_est.keys()
+}
 
-Trhofit_ga = thermo.make_sounding_from_adiabat(P, T_ga, q_ga)
-Trhofit_or = thermo.make_sounding_from_adiabat(P, T_or, q_or)
-deltafit = Trhofit_or.Trho - Trhofit_ga.Trho.interp(altitude=Trhofit_or.altitude)
 
-T_pls = T_or+T_sig
-q_pls = mtf.partial_pressure_to_specific_humidity(mt.es_default(T_pls) * 0.820, Px)
-Trhofit_pls = thermo.make_sounding_from_adiabat(P, T_pls, q_pls)
+deltafits = {
+    "orcestra": adiabat_fits["orcestra"].Trho
+    - adiabat_fits["gate"].Trho.interp(altitude=adiabat_fits["orcestra"].altitude)
+}
+for datakey, newkey in [("orcestra", "pls"), ("gate", "mns")]:
+    new_T = sfc_est[datakey]["T"] + T_sig
+    adiabat_fits[newkey] = thermo.make_sounding_from_adiabat(
+        P,
+        new_T,
+        mtf.partial_pressure_to_specific_humidity(
+            svp.es_default(new_T) * sfc_est[datakey]["RH"], Px
+        ),
+    )
+deltafits["pls"] = adiabat_fits["pls"].Trho - adiabat_fits["gate"].Trho.interp(
+    altitude=adiabat_fits["pls"].altitude
+)
+deltafits["mns"] = adiabat_fits["orcestra"].Trho - adiabat_fits["mns"].Trho.interp(
+    altitude=adiabat_fits["orcestra"].altitude
+)
 
-T_mns = T_ga+T_sig
-q_mns = mtf.partial_pressure_to_specific_humidity(mt.es_default(T_mns) * 0.805, Px)
-Trhofit_mns = thermo.make_sounding_from_adiabat(P, T_mns, q_mns)
-
-deltafit_pls = Trhofit_pls.Trho - Trhofit_ga.Trho.interp(altitude=Trhofit_pls.altitude)
-deltafit_mns = Trhofit_or.Trho - Trhofit_mns.Trho.interp(altitude=Trhofit_or.altitude)
-
-deltafit_mns.plot()
-deltafit_pls.plot()
-#%%
-consrv2.Trho.plot(y="altitude")
-consrv2.T.plot(y="altitude")
-pseudo2.T.plot(y="altitude")
+deltafits["mns"].plot()
+deltafits["pls"].plot()
 # %%
 # - plot profiles
-#
-cw = 190 / 25.4
-sns.set_context(context="paper")
-fig, ax = plt.subplots(1, 3, figsize=(cw, cw / 2), sharey=True)
-
-ylim = (0, 23000)
-rlim = (0, 1)
-dlim = (295, 375)
-#
-# temperature profiles and adiabats
-kwargs = {"ax": ax[0], "y": "altitude", "ylim": ylim, "xlim": (185, 200)}
-
-gs_bar.ta.plot(c=colors["gate"], ls="-", label="GATE-RS", **kwargs)
-rs_bar.ta.plot(c=colors["rapsodi"], ls="-", label="ORCESTRA-RS", **kwargs)
-bs_bar.ta.plot(c=colors["beach"], ls="-", label="ORCESTRA-DS", **kwargs)
-
-pseudo2["T"].plot(c="grey", ls="--", **kwargs)
-consrv2["T"].plot(c="grey", ls=":", **kwargs)
-
-ax[0].plot(
-    [halo_tk.quantile(0.35), halo_tk.quantile(0.65)],
-    [zbar, zbar],
-    lw=2.5,
-    c="k",
-    label="HALO",
-)
-
-ax[0].plot(
-    [halo_tk.quantile(0.1), halo_tk.quantile(0.9)],
-    [zbar, zbar],
-    lw=0.5,
-    c="k",
-)
-ax[0].plot(
-    [halo_tk.quantile(0.49), halo_tk.quantile(0.51)], [zbar, zbar], lw=2.5, c="w"
-)
-
-ax[0].annotate("adiabats", xy=(250, 10500), fontsize=8)
-
-ax[0].annotate(
-    "$z_\\mathrm{cp}$",
-    xy=(230, (cp_ticks["rapsodi"] + cp_ticks["gate"]) / 2),
-    fontsize=8,
-)
-
-ax[0].set_xlim(190, 305)
-ax[0].set_xlabel("$T$ / K")
-ax[0].set_ylabel("z / km")
-ax[0].set_xticks(
-    [np.round(rs_bar.ta.min().values, 1), 250, np.round(rs_bar.ta.max().values, 1)]
-)
-ax[0].set_yticks(np.arange(0, 22000, 3000))
-ax[0].set_yticklabels([0, 3, 6, 9, 12, 15, 18, 21])
-ax[0].legend(fontsize=8, loc="lower left")
-sns.despine(ax=ax[0], offset={"bottom": 0, "left": 10})
-#
-# rh profiles and ice-saturation
-kwargs = {"ax": ax[1], "y": "altitude", "ylim": ylim, "xlim": (0, 1)}
-rs_bar.rh.plot(c=colors["rapsodi"], ls="-", **kwargs)
-bs_bar.sel(altitude=slice(None, 12000)).rh.plot(c=colors["beach"], ls="-", **kwargs)
-gs_bar.rh.where(gs_bar.ta > 220).plot(c=colors["gate"], ls="-", **kwargs)
-
-ax[1].plot(
-    [halo_rh.quantile(0.35), halo_rh.quantile(0.65)],
-    [zbar, zbar],
-    lw=2.5,
-    c="k",
-)
-
-ax[1].plot(
-    [halo_rh.quantile(0.1), halo_rh.quantile(0.9)],
-    [zbar, zbar],
-    lw=0.5,
-    c="k",
-)
-ax[1].plot(
-    [halo_rh.quantile(0.49), halo_rh.quantile(0.51)], [zbar, zbar], lw=2.5, c="w"
-)
-
-ax[1].annotate("HALO", xy=(0.1, 13500), fontsize=8)
-
-ax[1].annotate(
-    "ice-saturation",
-    xy=(0.52, 18500),
-    color=colors["rapsodi"],
-    fontsize=8,
-)
-
-ax[1].annotate(
-    "$z_0$",
-    xy=(0.5, (zp_ticks["rapsodi"] + zp_ticks["gate"]) / 2),
-    fontsize=8,
-)
-
-RHice.plot(c=colors["rapsodi"], ls="dotted", **kwargs)
-
-ax[1].set_xlabel("RH / 1")
-ax[1].set_ylabel("")
-ax[1].set_xticks(
-    [
-        np.round(
-            rs_bar.rh.sel(altitude=cp_ticks["rapsodi"], method="nearest").values, 2
-        ),
-        np.round(rs_bar.rh.sel(altitude=slice(9000, 12000)).mean().values, 2),
-        np.round(rs_bar.rh.sel(altitude=slice(None, 400)).min().values, 1),
-    ]
-)
-
-for x in ["rapsodi", "gate"]:
-    ax[0].axhline(cp_ticks[x], xmin=0.05, xmax=0.3, lw=1, ls=":", c=colors[x])
-    ax[1].hlines(zp_ticks[x], xmin=0.6, xmax=0.9, lw=1, ls=":", color=colors[x])
-
-sns.despine(ax=ax[1], offset=0)
-#
-# brunt-vaisala frequency profiles and adiabats
-kwargs = {"ax": ax[2], "y": "altitude", "ylim": ylim, "xlim": (0, 0.015)}
-mtf.brunt_vaisala_frequency(rs_bar.theta, rs_bar.q, rs_bar.altitude, axis=0).plot(
-    c=colors["rapsodi"], ls="-", label="rapsodi", **kwargs
-)
-mtf.brunt_vaisala_frequency(bs_bar.theta, bs_bar.q, bs_bar.altitude).plot(
-    c=colors["beach"], ls="-", label="beach", **kwargs
-)
-mtf.brunt_vaisala_frequency(gs_bar.theta, gs_bar.q, gs_bar.altitude).plot(
-    c=colors["gate"], ls="-", label="gate", **kwargs
-)
-
-mtf.brunt_vaisala_frequency(pseudo2["theta"], pseudo2["q"], pseudo2["altitude"]).plot(
-    c="grey", ls="--", label="pseudo", **kwargs
-)
-mtf.brunt_vaisala_frequency(consrv2["theta"], consrv2["q"], consrv2["altitude"]).plot(
-    c="grey", ls=":", label="moist", **kwargs
-)
-
-
-nt1 = mtf.brunt_vaisala_frequency(rs_bar.theta, rs_bar.q, rs_bar.altitude, axis=0).sel(
-    altitude=slice(None, 5000)
-)
-nt2 = mtf.brunt_vaisala_frequency(rs_bar.theta, rs_bar.q, rs_bar.altitude, axis=0).sel(
-    altitude=slice(9000, None)
-)
-
-for x in ["rapsodi", "gate"]:
-    print(ct_ticks[x])
-    ax[2].axhline(ct_ticks[x], xmin=0.5, xmax=0.8, lw=1, ls=":", c=colors[x])
-
-ax[2].annotate(
-    "$z_\\mathrm{ct}$",
-    xy=(0.0135, (ct_ticks["rapsodi"] + ct_ticks["gate"]) / 2),
-    fontsize=8,
-)
-
-ax[2].set_xticks([np.round(nt2.min().values, 3), np.round(nt1.max().values, 3)])
-ax[2].set_xlim(0.005, 0.015)
-ax[2].set_xlabel("$N$ / s")
-ax[2].set_ylabel("")
-
-sns.despine(ax=ax[2], offset={"bottom": 0, "left": 10})
-
-fig.tight_layout()
-plt.savefig("plots/sounding.pdf")
-plt.show()
-
-# %%
-# -- plot differencex wrt GATE
-#
-ylim = (0, 23000)
-
-delta_T_rs = rs_bar.ta - gs_bar.ta
-delta_T_bs = bs_bar.ta - gs_bar.ta
-
-sns.set_context("paper")
-fig, ax = plt.subplots(1, 1, figsize=(cw / 2, cw / 2 * 1.333), sharey=True)
-
-delta_T_rs.plot(
-    ax=ax, y="altitude", ylim=ylim, label="ORCESTRA-RS", color=colors["rapsodi"]
-)
-delta_T_bs.sel(altitude=slice(None, 14200)).plot(
-    ax=ax, y="altitude", ylim=ylim, label="ORCESTRA-DS", color=colors["beach"]
-)
-
-delta_pseudo.where(delta_pseudo > 0.1, drop=True).plot(
-    ax=ax, y="altitude", color=colors["rapsodi"], ls="--", lw=1
-)
-# x = x.where(x > 0.01)
-# x.plot(ax=ax, y="altitude", color="k", ls="dotted", lw=1)
-
-ax.axvline(0, color="grey", lw=0.5, ls="--")
-# ax.vlines(-5.6, ymin=20e3, ymax=23e3, color="grey", lw=0.5, ls="-")
-ax.plot([-1, -2.5], [21.0e3, 23e3], color="grey", lw=0.5, ls="-")
-
-ax.plot(
-    np.asarray([-1, 3.5]),
-    np.asarray([z_T0.quantile(0.5), z_T0.quantile(0.5)]),
-    color="grey",
-    lw="0.5",
-    ls="-",
-)
-ax.annotate(
-    "$z_0$",
-    xy=(-2, z_T0.quantile(0.5)),
-    fontsize=8,
-)
-
-ax.set_xlabel("$\\Delta T$ / K")
-ax.set_ylabel("z / m")
-ax.set_ylabel("z / km")
-
-dth_st = delta_T_rs.sel(altitude=slice(23000, 24500)).mean().values
-dth_bl = delta_T_bs.sel(altitude=slice(None, 400)).mean().values
-
-ax.annotate("pseudo adiabat", xy=(2.6, 16200), color=colors["rapsodi"], fontsize=8)
-ax.annotate("RCE", xy=(-2.8, 21200), color="k", fontsize=8)
-
-ax.set_xticks(
-    [
-        np.round(delta_T_rs.min().values, 2),
-        np.round(dth_st, 2),
-        np.round(dth_bl, 2),
-        np.round(delta_T_rs.max().values, 2),
-    ]
-)
-ax.set_xticks([0], minor=True)
-
-ax.set_yticks(np.arange(0, 21500, 3000))
-ax.set_yticklabels([0, 3, 6, 9, 12, 15, 18, 21])
-ax.set_yticks([z_T0_gate.quantile(0.5), z_T0.quantile(0.5)], minor=True)
-
-plt.legend(fontsize=8)
-plt.tight_layout()
-sns.despine(offset={"bottom": 0, "left": 5})
-plt.savefig("plots/DeltaT.pdf")
-
-# %%
-# - plot profiles -alternative
 #
 cw = 190 / 25.4
 sns.set_context(context="paper")
