@@ -83,29 +83,15 @@ zbar = x.altitude.mean().values
 # %%
 # - parameters for soundings
 #
-sfc_vals = {}
-sondes = {"gate": gs_PE, "rapsodi": rs_PE, "beach": bs_PE}
-for sset in ["gate", "rapsodi", "beach"]:
-    xs = sondes[sset]
-    P_sfc = xs.p.sel(altitude=slice(10, 50)).max(dim="altitude") + 100
-    RH_sfc = xs.rh.sel(altitude=slice(0, 50)).max(dim="altitude")
-    T_sfc = mtf.theta2T(
-        xs.theta.sel(altitude=slice(None, 400)).mean(dim="altitude"), P_sfc
-    )
-    q_sfc = mtf.partial_pressure_to_specific_humidity(RH_sfc * es(T_sfc), P_sfc)
-    sfc_vals[sset] = {
-        "P": P_sfc.mean(),
-        "RH": RH_sfc.mean(),
-        "T": T_sfc.mean(),
-        "q": q_sfc.mean(),
-    }
+sfc_vals = {key: md.get_surface(ds, es) for key, ds in sondes.items()}
+for key, ds in sondes.items():
     print(
-        f"{sset:10s}: RH = {RH_sfc.mean().values:.3f}, T = {T_sfc.mean().values:.2f} K, P = {P_sfc.mean().values / 100:.1f} hPa"
+        f"{key:10s}: RH = {sfc_vals[key]['RH']:.3f}, T = {sfc_vals[key]['T']:.2f} K, P = {sfc_vals[key]['P'] / 100:.1f} hPa"
     )
+
 # %%
 # - zero-degree isotherms
 #
-datasets = {"rapsodi": rs_PE, "gate": gs_PE, "beach": bs_PE}
 print("Height of 0˚ isotherm:")
 zp_ticks = {}
 for key, ds in datasets.items():
