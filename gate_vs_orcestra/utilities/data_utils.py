@@ -93,10 +93,9 @@ def open_gate(cid, local=False):
 def open_gate_ras(cids):
     ra_dict = {}
     for key, cid in cids.items():
-        if (key.startswith("RA_")):
-            ra_dict[key] = (
-                xr.open_dataset(f"ipfs://{cid}", engine="zarr")
-                .sortby("time")
+        if key.startswith("RA_"):
+            ra_dict[key] = xr.open_dataset(f"ipfs://{cid}", engine="zarr").sortby(
+                "time"
             )
     return ra_dict
 
@@ -121,16 +120,17 @@ def get_cids():
         "dropsondes": "ipfs://bafybeiczbv7mycr2jois6t4dq3zwiltycomwo5xxvjqcjz2ot3newzar6q",
         "halo": "bafybeif52irmuurpb27cujwpqhtbg5w6maw4d7zppg2lqgpew25gs5eczm",
         "meteor3": "bafybeib5awa3le6nxi4rgepn2mwxj733aazpkmgtcpa3uc2744gxv7op44",
-        'RA_NOAA_DC6': 'bafybeigvptjjii53y7mqoandkmr4nhkb5w5z6bkejctooi2zjde5zacm7e',
-        'RA_NCAR_Queen_Air': 'bafybeieziu2ncc5drxafjewt6zddcfulmyf5uqyjgh4olwuxwk3yszmfc4',
-        'RA_NOAA_DC6_39_Charlie': 'bafybeica7ulu6ezv4horvgpravnudjhceiajqdlxfvqxxlapb7pvyvgci4',
-        'RA_NCAR_Elektra': 'bafybeiflwpofkprgfiusp3ihh3g7grlwndin5khwic2xliohqj6ncxqlzm',
-        'RA_NCAR_Sabreliner': 'bafybeih2aw3gjhj5oa4igcfco6uvdo6z3qjiq7frg53hfcmlb7b4abfa3i',
-        'RA_NOAA_C130': 'bafybeiboomwk3tk6tifs5qok7ms2rdvfh6bjwmgvh7ejiiz4wg6xnly72u',
-        'RA_DC7_1S': 'bafybeiepibh5btgq2eumfgivhuttl5wmzswyd5ualnzhuh5jdbdgjiw5a4',
-        'RA_UK_Hercules_XV208_100F': 'bafybeibewu6outdtft5nx2jwgmnvhxttfq2kefhcnj4gzv6b6mmz3dhcqq',
-        'RA_NASA_Convair_990': 'bafybeiejizhiw5fnholonatocpwkjnaifageaxnu4y2xorvqq7v5fci264',
+        "RA_NOAA_DC6": "bafybeigvptjjii53y7mqoandkmr4nhkb5w5z6bkejctooi2zjde5zacm7e",
+        "RA_NCAR_Queen_Air": "bafybeieziu2ncc5drxafjewt6zddcfulmyf5uqyjgh4olwuxwk3yszmfc4",
+        "RA_NOAA_DC6_39_Charlie": "bafybeica7ulu6ezv4horvgpravnudjhceiajqdlxfvqxxlapb7pvyvgci4",
+        "RA_NCAR_Elektra": "bafybeiflwpofkprgfiusp3ihh3g7grlwndin5khwic2xliohqj6ncxqlzm",
+        "RA_NCAR_Sabreliner": "bafybeih2aw3gjhj5oa4igcfco6uvdo6z3qjiq7frg53hfcmlb7b4abfa3i",
+        "RA_NOAA_C130": "bafybeiboomwk3tk6tifs5qok7ms2rdvfh6bjwmgvh7ejiiz4wg6xnly72u",
+        "RA_DC7_1S": "bafybeiepibh5btgq2eumfgivhuttl5wmzswyd5ualnzhuh5jdbdgjiw5a4",
+        "RA_UK_Hercules_XV208_100F": "bafybeibewu6outdtft5nx2jwgmnvhxttfq2kefhcnj4gzv6b6mmz3dhcqq",
+        "RA_NASA_Convair_990": "bafybeiejizhiw5fnholonatocpwkjnaifageaxnu4y2xorvqq7v5fci264",
     }
+
 
 # redundant datasets
 #        'RA_UK_Hercules_XV208a_100F': 'bafybeiehni2sjyeoptljn4op4ee5yy4qo3ufwziw6gidzhnqakdpxb5c6a',
