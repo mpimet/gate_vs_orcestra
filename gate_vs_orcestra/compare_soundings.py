@@ -232,35 +232,17 @@ dlim = (295, 375)
 #
 # temperature profiles and adiabats
 kwargs = {"ax": ax[0], "y": "altitude", "ylim": ylim, "xlim": (185, 200)}
+for key, label in [
+    ("rapsodi", "ORCESTRA-RS"),
+    ("gate", "GATE-RS"),
+    ("beach", "ORCESTRA-DS"),
+]:
+    sonde_means[key].ta.plot(c=colors[key], ls="-", label=label, **kwargs)
 
-gs_bar.ta.plot(c=colors["gate"], ls="-", label="GATE-RS", **kwargs)
-rs_bar.ta.plot(c=colors["rapsodi"], ls="-", label="ORCESTRA-RS", **kwargs)
-bs_bar.ta.plot(c=colors["beach"], ls="-", label="ORCESTRA-DS", **kwargs)
 
-#pseudo2["T"].sel(altitude=slice(0, 15300)).plot(c="grey", ls="--", **kwargs)
-#consrv2["T"].sel(altitude=slice(0, 15300)).plot(c="grey", ls=":", **kwargs)
-Trhofit_ga["Trho"].sel(altitude=slice(0, 15300)).plot(c="grey", ls=":", **kwargs)
-Trhofit_or["Trho"].sel(altitude=slice(0, 15300)).plot(c="grey", ls="--", **kwargs)
+for key, ls in [("orcestra", "--"), ("gate", ":")]:
+    adiabat_fits[key].Trho.sel(altitude=slice(0, 15300)).plot(c="grey", ls=ls, **kwargs)
 
-# ax[0].plot(
-#     [halo_tk.quantile(0.35), halo_tk.quantile(0.65)],
-#     [zbar, zbar],
-#     lw=2.5,
-#     c="k",
-#     label="HALO",
-# )
-
-# ax[0].plot(
-#     [halo_tk.quantile(0.1), halo_tk.quantile(0.9)],
-#     [zbar, zbar],
-#     lw=0.5,
-#     c="k",
-# )
-# ax[0].plot(
-#     [halo_tk.quantile(0.49), halo_tk.quantile(0.51)], [zbar, zbar], lw=2.5, c="w"
-# )
-
-# ax[0].annotate("adiabats", xy=(250, 10500), fontsize=8)
 
 ax[0].annotate(
     "$z_\\mathrm{cp}$",
@@ -272,38 +254,33 @@ ax[0].set_xlim(190, 305)
 ax[0].set_xlabel("$T$ / K")
 ax[0].set_ylabel("z / km")
 ax[0].set_xticks(
-    [np.round(rs_bar.ta.min().values, 1), 250, np.round(rs_bar.ta.max().values, 1)]
+    [
+        np.round(sonde_means["rapsodi"].ta.min().values, 1),
+        250,
+        np.round(sonde_means["rapsodi"].ta.max().values, 1),
+    ]
 )
 ax[0].set_yticks(np.arange(0, 22000, 3000))
 ax[0].set_yticklabels([0, 3, 6, 9, 12, 15, 18, 21])
 sns.despine(ax=ax[0], offset={"bottom": 0, "left": 10})
 
-#
-# brunt-vaisala frequency profiles and adiabats
 kwargs = {"ax": ax[1], "y": "altitude", "ylim": ylim, "xlim": (0, 0.015)}
-mtf.brunt_vaisala_frequency(rs_bar.theta, rs_bar.q, rs_bar.altitude).plot(
-    c=colors["rapsodi"], ls="-", label="ORCESTRA-RS", **kwargs
-)
-mtf.brunt_vaisala_frequency(bs_bar.theta, bs_bar.q, bs_bar.altitude).plot(
-    c=colors["beach"], ls="-", label="ORCESTRA-DS", **kwargs
-)
-mtf.brunt_vaisala_frequency(gs_bar.theta, gs_bar.q, gs_bar.altitude).plot(
-    c=colors["gate"], ls="-", label="GATE-RS", **kwargs
-)
 
-mtf.brunt_vaisala_frequency(Trhofit_or["theta_rho"], Trhofit_or["q"], Trhofit_or["altitude"]).sel(
-    altitude=slice(0, 15300)
-).plot(c="grey", ls="--", label="orcestra-fit", **kwargs)
-mtf.brunt_vaisala_frequency(Trhofit_ga["theta_rho"], Trhofit_ga["q"], Trhofit_ga["altitude"]).sel(
-    altitude=slice(0, 15300)
-).plot(c="grey", ls=":", label="gate-fit", **kwargs)
+for key, label in [
+    ("rapsodi", "ORCESTRA-RS"),
+    ("gate", "GATE-RS"),
+    ("beach", "ORCESTRA-DS"),
+]:
+    sonde_means[key].sel(altitude=slice(20, 15300)).n2.plot(
+        c=colors[key], ls="-", label=label, **kwargs
+    )
 
-nt1 = mtf.brunt_vaisala_frequency(rs_bar.theta, rs_bar.q, rs_bar.altitude).sel(
-    altitude=slice(None, 5000)
-)
-nt2 = mtf.brunt_vaisala_frequency(rs_bar.theta, rs_bar.q, rs_bar.altitude).sel(
-    altitude=slice(9000, None)
-)
+for key, ls in [("orcestra", "--"), ("gate", ":")]:
+    mtf.brunt_vaisala_frequency(
+        adiabat_fits[key].theta_rho,
+        adiabat_fits[key].q,
+        adiabat_fits[key].altitude,
+    ).sel(altitude=slice(0, 15300)).plot(c="grey", ls=ls, label=f"{key}-fit", **kwargs)
 
 for x in ["rapsodi", "gate"]:
     print(ct_ticks[x])
@@ -315,43 +292,46 @@ ax[1].annotate(
     fontsize=8,
 )
 
-ax[1].set_xticks([np.round(nt2.min().values, 3), np.round(nt1.max().values, 3)])
+ax[1].set_xticks(
+    [
+        np.round(
+            sonde_means["rapsodi"].n2.sel(altitude=slice(9000, None)).min().values, 3
+        ),
+        np.round(
+            sonde_means["rapsodi"].n2.sel(altitude=slice(200, 5000)).max().values, 3
+        ),
+    ]
+)
 ax[1].set_xlim(0.005, 0.015)
 ax[1].set_xlabel("$N$ / s")
 ax[1].set_ylabel("")
 ax[1].legend(ncol=2, fontsize=8, loc="best")
 sns.despine(ax=ax[1], offset={"bottom": 0, "left": 10})
 
-delta_T_rs.plot(
+rs_tdiff = sonde_means["rapsodi"].ta - sonde_means["gate"].ta
+ds_tdiff = sonde_means["beach"].ta - sonde_means["gate"].ta
+rs_tdiff.plot(
     ax=ax[2], y="altitude", ylim=ylim, label="ORCESTRA-RS", color=colors["rapsodi"]
 )
-delta_T_bs.sel(altitude=slice(None, 14200)).plot(
+ds_tdiff.sel(altitude=slice(None, 14200)).plot(
     ax=ax[2], y="altitude", ylim=ylim, label="ORCESTRA-DS", color=colors["beach"]
 )
-x_bar = deltafit.sel(altitude=slice(0, 15300)).where(deltafit > 0.1, drop=True)
-x_bar.plot(
-    ax=ax[2], y="altitude", color="k", ls="-", lw=1
+
+altslice = slice(0, 15300)
+deltafits["orcestra"].sel(altitude=altslice).where(
+    deltafits["orcestra"] > 0.1, drop=True
+).plot(ax=ax[2], y="altitude", color="k", ls="-", lw=1)
+
+ax[2].fill_betweenx(
+    deltafits["mns"].sel(altitude=altslice).altitude[:-1],
+    deltafits["mns"].sel(altitude=altslice)[:-1],
+    deltafits["pls"].sel(altitude=altslice),
+    color=colors["orcestra"],
+    alpha=0.2,
 )
-
-x_mns = deltafit_mns.sel(altitude=slice(0, 15300)).where(deltafit_mns > 0.1, drop=True)
-#x_mns.plot(
-#    ax=ax[2], y="altitude", color="k", ls="-", lw=0.5
-#)
-x_pls = deltafit_pls.sel(altitude=slice(0, 15300)).where(deltafit_pls > 0.1, drop=True)
-#x_pls.plot(
-#    ax=ax[2], y="altitude", color="k", ls="-", lw=0.5
-#)
-
-plt.fill_betweenx(x_mns.altitude[:-1], x_mns[:-1], x_pls[:], color=colors["orcestra"], alpha=0.2)
-# delta_consrv.where(delta_consrv > 0.1, drop=True).plot(
-#    ax=ax[2], y="altitude", color="k", ls=":", lw=1
-# )
-
 ax[2].axvline(0, color="grey", lw=0.5, ls="--")
-# ax.vlines(-5.6, ymin=20e3, ymax=23e3, color="grey", lw=0.5, ls="-")
 ax[2].plot([-1, -2.5], [21.0e3, 23e3], color="grey", lw=0.5, ls="-")
-
-
+ax[2].annotate("RCE", xy=(-2.8, 21200), color="k", fontsize=8)
 ax[2].annotate(
     "$z_0$",
     xy=(-2, z_T0.quantile(0.5)),
@@ -360,18 +340,12 @@ ax[2].annotate(
 
 ax[2].set_xlabel("$\\Delta T$ / K")
 ax[2].set_ylabel(None)
-
-dth_st = delta_T_rs.sel(altitude=slice(23000, 24500)).mean().values
-dth_bl = delta_T_bs.sel(altitude=slice(None, 400)).mean().values
-
-ax[2].annotate("RCE", xy=(-2.8, 21200), color="k", fontsize=8)
-
 ax[2].set_xticks(
     [
-        np.round(delta_T_rs.min().values, 2),
-        np.round(dth_st, 2),
-        np.round(dth_bl, 2),
-        np.round(delta_T_rs.max().values, 2),
+        np.round(rs_tdiff.min().values, 2),
+        np.round(rs_tdiff.sel(altitude=slice(23000, 24500)).mean().values, 2),
+        np.round(ds_tdiff.sel(altitude=slice(None, 400)).mean().values, 2),
+        np.round(rs_tdiff.max().values, 2),
     ]
 )
 ax[2].set_xticks([0], minor=True)
@@ -379,16 +353,13 @@ ax[2].set_xticks([0], minor=True)
 ax[2].set_yticks(np.arange(0, 21500, 3000))
 ax[2].set_yticklabels([0, 3, 6, 9, 12, 15, 18, 21])
 ax[2].set_yticks([z_T0_gate.quantile(0.5), z_T0.quantile(0.5)], minor=True)
-
 for x in ["rapsodi", "gate"]:
     ax[0].axhline(cp_ticks[x], xmin=0.05, xmax=0.3, lw=1, ls=":", c=colors[x])
     ax[2].hlines(zp_ticks[x], xmin=-1.0, xmax=3, lw=1, ls=":", color=colors[x])
 
 sns.despine(ax=ax[2], offset=0)
-
 fig.tight_layout()
-plt.savefig("plots/sounding-new.pdf")
-plt.show()
+fig.savefig("plots/sounding-new.pdf")
 # %%
 len(x_mns)
 # %%
