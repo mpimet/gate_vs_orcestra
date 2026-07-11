@@ -107,7 +107,7 @@ def get_cids():
         "gate": "bafybeiccxo3qnccbqki2ccpv3bpjby72kkwg5sc3yv5rxu54l3rfnn3jgy",
         "orcestra": orcestra_main,
         "radiosondes": "QmcQRuqCgLRUVyCXjzmKfRVL34xxnxzL91PWTJSELrtQxa",
-        "dropsondes": "ipfs://bafybeiczbv7mycr2jois6t4dq3zwiltycomwo5xxvjqcjz2ot3newzar6q",
+        "dropsondes": "bafybeiczbv7mycr2jois6t4dq3zwiltycomwo5xxvjqcjz2ot3newzar6q",
         "halo": "bafybeif52irmuurpb27cujwpqhtbg5w6maw4d7zppg2lqgpew25gs5eczm",
         "meteor3": "bafybeib5awa3le6nxi4rgepn2mwxj733aazpkmgtcpa3uc2744gxv7op44",
     }
