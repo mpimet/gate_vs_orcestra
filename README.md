@@ -37,7 +37,7 @@ The [PIRATA buoy data](https://www.pmel.noaa.gov/gtmba/pmel-theme/atlantic-ocean
 
 The primary data, in the form of original tar files with the encoded data archive have been redistributed using IPFS via the CID 
 ```
-QmP84Nnaf8vMEUrp8Sr2sm3Xm8xxwfkFgtuGE69uUAwYau
+bafybeiccxo3qnccbqki2ccpv3bpjby72kkwg5sc3yv5rxu54l3rfnn3jgy
 ````
 This data allows users to recreate our reprocessing using the scripts and fortran code in this repository.  The data is the same as would be procurred from NOAA but avoids processing fees.  Our redistribution is authorized by NOAA.
 
@@ -75,7 +75,7 @@ module load fftw
 module load gcc
 spack load /tpmfvwu # openblas
 
-CC=gcc uv run pip install git+https://github.com/igmk/pamtra
+CC=gcc FC=gfortran uv run pip install git+https://github.com/igmk/pamtra
 ``` 
 
 Using a Mac (ARM)
