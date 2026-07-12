@@ -154,6 +154,19 @@ def open_meteor3(cid):
     return ds
 
 
+def open_hamp():
+    hamp = xr.open_dataset(
+        "ipfs://bafybeicbj76n3hi52pxtcyzu5in7efk36fk7lavauishclybrsbvlrpq3e",
+        engine="zarr",
+    ).set_coords(({"lat", "lon", "time"}))
+    return (
+        hamp.where(np.abs(hamp.plane_pitch) < 3, drop=True)
+        .where(np.abs(hamp.plane_roll) < 3, drop=True)
+        .where(hamp.plane_altitude > 13800, drop=True)
+        .where(hamp.plane_altitude < 14000, drop=True)
+    )
+
+
 def fsglob(pattern):
     schema = pattern.split(":")[0]
     fs = fsspec.filesystem(schema)

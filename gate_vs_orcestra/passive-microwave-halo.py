@@ -1,43 +1,60 @@
 # %%
-# - script runs only within a built version of pamtra and its associated environment
-#
 import os
 
 os.environ["PAMTRA_DATADIR"] = "/Users/m219063/work/pamtra/pamtra_data"
 import seaborn as sns
-
 import pyPamtra
 import matplotlib.pyplot as plt
 import numpy as np
-
 import xarray as xr
-
-
-import utilities.data_utils as data
+import utilities.data_utils as dus
 import utilities.preprocessing as pp
+import utilities.settings_and_colors as set
+
+# %%
+ch2 = 53.74
+ch3 = 54.96
+ch4 = 57.94
+
+
+cids = dus.get_cids()
 
 
 # %%
-cids = data.get_cids()
+
 rs = (
-    data.open_radiosondes(cids["radiosondes"])
+    dus.open_radiosondes(cids["radiosondes"])
     .pipe(pp.sel_percusion_E)
     .mean(dim="sonde")
     .coarsen(altitude=10, boundary="trim")
     .mean()
 )
 gs = (
-    data.open_gate(cids["gate"])
+    dus.open_gate(cids["gate"])
     .pipe(pp.sel_percusion_E)
     .mean(dim="sonde")
     .coarsen(altitude=10, boundary="trim")
     .mean()
 )
-sondes = {
-    "orcestra": {"sounding": rs, "tsfc": 299.0},
-    "gate": {"sounding": gs, "tsfc": 297.5},
-}
+
+hamp = dus.open_hamp().pipe(
+    pp.sel_percusion_E, item_var="time", lon_var="lon", lat_var="lat"
+)
+
+halo_TB = (hamp.sel(frequency=53.75).where(np.abs(hamp.plane_roll) < 5, drop=True)).TBs
+
+halo_alt = hamp.plane_altitude.mean(dim="time")
+halo_nadir = 180 - hamp.plane_pitch.mean(dim="time")
+print(f"HALO PERCUSSION E means: nadir {halo_nadir:.2f}, altitude {halo_alt:.2f}")
+
+
 # %%
+sondes = {
+    "orcestra": {"sounding": rs, "tsfc": set.sfc_est["orcestra"]["T"]},
+    "gate": {"sounding": gs, "tsfc": set.sfc_est["gate"]["T"]},
+}
+
+
 pam = pyPamtra.pyPamtra()
 pam.df.addHydrometeor(
     (
@@ -66,8 +83,8 @@ pam.df.addHydrometeor(
 pam.df.nhydro
 pam.nmlSet["active"] = False
 
-# %%
-freqs = np.arange(40, 80, 0.25)
+freqs = np.sort(np.concatenate((np.arange(40, 80, 0.25), np.asarray([ch2, ch3, ch4]))))
+
 nlevs = 240
 tb = {}
 for key, ds in sondes.items():
@@ -83,7 +100,7 @@ for key, ds in sondes.items():
     )
     pamData["press"] = x.p[:nlevs].interpolate_na(dim="altitude", method="akima").values
 
-    pamData["obs_height"] = np.asarray([14300.0, 400000.0])
+    pamData["obs_height"] = np.asarray([halo_alt, 400000.0])
     pamData["lat"] = np.asarray([8.5])
     pamData["lon"] = np.asarray([-23.5])
     pamData["groundtemp"] = [ds["tsfc"]]
@@ -115,12 +132,12 @@ pamtra_tb = xr.DataArray(
         "polarization": ["horizontal", "vertical"],
     },
 )
+
 # %%
 sns.set_context(context="paper")
-
 fig, ax = plt.subplots(2, 1, figsize=(5, 5), sharex=True)
 
-x = pamtra_tb.sel(altitude=14300.0).sel(polarization="horizontal").interp(angle=[177])
+x = pamtra_tb.sel(altitude=400000.0).sel(polarization="horizontal").interp(angle=[180])
 
 x.sel(campaign="orcestra").plot(color="navy", ax=ax[0])
 x.sel(campaign="gate").plot(color="orangered", ax=ax[0])
@@ -135,84 +152,36 @@ ax[1].set_ylabel("$\\Delta T_\\mathrm{b}$ / K")
 ax[1].set_xlabel("frequency / GHz")
 ax[0].set_xlabel(None)
 ax[1].set_xticks([40, 50, 60, 70, 80])
-ax[1].set_xticks([53.75], minor=True)
+ax[1].set_xticks([ch2], minor=True)
 ax[1].set_xlim(40, 80)
 ax[1].set_yticks(
-    [0, np.round(x.diff(dim="campaign").sel(frequency=53.75).squeeze().values, 2), -2]
+    [0, np.round(x.diff(dim="campaign").sel(frequency=ch2).squeeze().values, 2), -2]
 )
 ax[0].set_title(None)
 ax[1].set_title(None)
 
 sns.despine(offset=10)
-# %%
-sns.set_context(context="paper")
-
-fig, ax = plt.subplots(1, 1, figsize=(5, 3), sharex=True)
-
-slant = 180 - 65
-alt, ang = 14300, 177
-x = (
-    (pamtra_tb.sel(altitude=14300.0).sel(polarization="horizontal").interp(angle=[177]))
-    .diff(dim="campaign")
-    .plot(color="teal", label=f"{alt / 1000} km, {ang} deg")
-)
-
-ang = slant
-x = (
-    (pamtra_tb.sel(altitude=alt).sel(polarization="horizontal").interp(angle=ang))
-    .diff(dim="campaign")
-    .plot(color="teal", ls=":", label=f"{alt / 1000} km, {ang} deg")
-)
-
-alt, ang = 400000, 180
-x = (
-    (pamtra_tb.sel(altitude=alt).sel(polarization="horizontal").interp(angle=ang))
-    .diff(dim="campaign")
-    .plot(color="k", label=f"{alt / 1000} km, {ang} deg")
-)
-
-ang = slant
-x = (
-    (pamtra_tb.sel(altitude=alt).sel(polarization="horizontal").interp(angle=ang))
-    .diff(dim="campaign")
-    .plot(color="k", ls=":", label=f"{alt / 1000} km, {ang} deg")
-)
-
-plt.gca().axvline(53.75, c="k")
-
-plt.legend()
-ax.set_ylabel("$T_\mathrm{b}$ / K")
-ax.set_xlim(50, 60)
-ax.set_ylabel("$\\Delta T_\\mathrm{b}$ / K")
-ax.set_title(None)
-ax.set_xlabel("frequency / GHz")
-
-sns.despine(offset=10)
-# %%
-
-hamp = (
-    xr.open_dataset(
-        "ipfs://bafybeicbj76n3hi52pxtcyzu5in7efk36fk7lavauishclybrsbvlrpq3e",
-        engine="zarr",
-    ).set_coords(({"lat", "lon", "time"}))
-).pipe(pp.sel_percusion_E, item_var="time", lon_var="lon", lat_var="lat")
 
 # %%
-halo_TB = hamp.sel(frequency=53.75).where(np.abs(hamp.plane_roll) < 5, drop=True).TBs
+ang = 180
+for alt in pamtra_tb.altitude.values:
+    print("altitude", alt)
 
-halo_TB.plot.hist(bins=100, density=True, range=(252, 272), color="teal", alpha=0.5)
-
-tb = (
-    pamtra_tb.sel(altitude=14300.0)
-    .sel(polarization="horizontal")
-    .sel(campaign="orcestra")
-    .sel(frequency=53.75, method="nearest")
-    .interp(angle=[177])
-)
-
-plt.gca().axvline(np.round(tb, 2), c="k")
-plt.gca().axvline(halo_TB.quantile(0.5), c="teal", ls="dotted")
-sns.despine(offset=10)
-plt.gca().set_xlabel("$T_\\mathrm{b}$ / K")
-plt.gca().set_title(None)
-print(halo_TB.quantile(0.5))
+    y = (
+        pamtra_tb.sel(altitude=alt)
+        .sel(polarization="horizontal")
+        .diff(dim="campaign")
+        .interp(angle=ang)
+    )
+    MT = np.round(y.sel(frequency=ch2).squeeze().values, 2)
+    TP = np.round(y.sel(frequency=ch3).squeeze().values, 2)
+    LS = np.round(y.sel(frequency=ch4).squeeze().values, 2)
+    LT = 1.538 * MT - 0.548 * TP + 0.01 * LS
+    T24 = 1.1 * MT - 0.1 * LS
+    print(
+        f"Channel 2 {ch2:.2f} GHz: {MT:.2f} K, Channel 3 {ch3:.2f} GHz: {TP:.2f} K, Channel 4 {ch4:.2f} GHz: {LS:.2f} K"
+    )
+    print(f"Bulk temperature change, UAHv6 {LT:.2f} K, and Fu {T24:.2f} K")
+    print(
+        f"Bulk temperature trends, UAHv6 {LT / 5:.2f} K/dec, and Fu {T24 / 5:.2f} K/dec"
+    )
