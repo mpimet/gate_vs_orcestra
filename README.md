@@ -91,6 +91,8 @@ Other gcc versions can also be used, however, they apparently have to be smaller
 
 To re-create the RCE calculations requires running Konrad. Konrad relies on the CliMT package, which unfortunately is no longer maintained. Consequently, installation with `uv` is not possible right away. However, the following workaround should install Konrad and CliMT to the virtual environment:
 
+As a first step, the uv environment needs to be build from the `konrad_uv.lock` because konrad does not run with newer versions of e.g. `xarray`.
+
 ```
 # Activate the `uv` environment directly
 uv sync
