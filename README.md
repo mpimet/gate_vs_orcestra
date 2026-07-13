@@ -43,7 +43,7 @@ This data allows users to recreate our reprocessing using the scripts and fortra
 
 ### Running the scripts in this repo
 
-The python environment for this repo was build using [uv](https://astral.sh/blog/uv). All dependencies  can be found in the `pyproject.toml`, in case you want to build your own environment.
+The python environment for this repo was built using [uv](https://astral.sh/blog/uv). All dependencies  can be found in the `pyproject.toml`, in case you want to build your own environment.
 
 The plots, tables, and calculations in the corresponding paperdraft can be found in the following scripts:
 | Figure/Table   | short description | script |
