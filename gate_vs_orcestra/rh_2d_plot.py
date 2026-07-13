@@ -293,7 +293,7 @@ for ds, y, alpha, c in [(adiabat_fits, 0.123, 1, "k"), (iwv, 0.134, 0.5, "gray")
     axes[0].annotate(
         "{:.2f}".format(diff),
         xy=(mean, y),
-        xytext=(mean, y + 0.005),
+        xytext=(mean, y + 0.002),
         fontsize=8,
         ha="center",
         alpha=alpha,
