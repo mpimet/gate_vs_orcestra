@@ -1,6 +1,6 @@
 # %%
 import matplotlib.pyplot as plt
-import seaborn as sn
+import seaborn as sns
 import random
 import numpy as np
 from scipy.stats import linregress
@@ -11,6 +11,8 @@ import utilities.preprocessing as pp
 import warnings
 import statsmodels.api as sm
 from scipy.stats import t
+from scipy import stats
+
 # %%
 # - Loading and reformatting the data
 
@@ -19,7 +21,7 @@ pirata = pp.get_pirata()
 
 cids = dus.get_cids()
 ships = {
-    "gate": dus.open_meteor2().pipe(
+    "gate": dus.open_meteor2(f"ipfs://{cids["meteor-gate"]}").pipe(
         pp.sel_gate_A, item_var="time", lon_var="lon", lat_var="lat"
     ),
     "orcestra": dus.open_meteor3(cids["meteor3"]).pipe(
@@ -294,3 +296,101 @@ plt.ylabel("CDF")
 plt.xlabel(r"$|\Delta T_{3\,\mathrm{m}}|$ between two years (°C)")
 plt.show()
 plt.savefig("plots/pirata_pairwise_comparison.pdf", bbox_inches="tight", dpi=300)
+# %%
+# - Revised figure for final paper
+T0 = 273.15
+confidence = 0.95
+
+sns.set_context("paper")
+cw = 190 / 25.4  # A4 Column width with 1cm margins
+fig, ax = plt.subplots(1, 1, figsize=(cw * 0.67, cw * 0.5))
+
+mlabel = {"gate": "GATE (Meteor)", "orcestra": "ORCESTRA (Meteor)"}
+for campaign in ["gate", "orcestra"]:
+    ds = ship_data[campaign]
+    ax.plot(
+        [ds["year"], ds["year"]],
+        [ds[Tfld][1], ds[Tfld][3]],
+        lw=2.5,
+        c=colors[campaign],
+        label=mlabel[campaign],
+        zorder=2,
+    )
+    ax.plot(
+        [ds["year"], ds["year"]],
+        [ds[Tfld][0], ds[Tfld][4]],
+        lw=0.5,
+        c=colors[campaign],
+        zorder=2,
+    )
+    ax.plot(
+        [ds["year"] - 0.2, ds["year"] + 0.2],
+        [ds[Tfld][2], ds[Tfld][2]],
+        lw=3,
+        c="w",
+        zorder=2,
+    )
+
+pirata_filtered = (
+    pirata["t_air"]
+    .sel(lon=337, lat=sel_lat)
+    .where(pirata["time.month"].isin([8, 9]), drop=True)
+    .groupby("time.year")
+    .mean()
+    .where(sel_t_air_num >= 60, drop=True)
+    .dropna(dim="year", how="any")
+    + T0
+)
+pirata_filtered.plot(
+    ax=ax,
+    marker=".",
+    linestyle="",
+    color=colors["pirata" + str(sel_lat)],
+    label="PIRATA",
+)
+
+#############
+
+reg, err = linear_trend(best.sel(year=slice(1974, None)), only_slope=False)
+slope, intercept, r_value, _, _ = reg
+print(f"Best Trends: K/dec={slope * 10:.2f}, $R^2$={r_value**2:.2f}")
+best.plot(ax=ax, marker=".", linestyle="", color=colors["best"], label="Berkeley")
+
+x, y = best.year.values, best.values
+p, cov = np.polyfit(x, y, 1, cov=True)
+
+t_val = stats.t.ppf(confidence, len(x) - 2)
+ci = (
+    t_val
+    * np.sqrt(np.sum((y - (p[0] * x + p[1])) ** 2) / (len(x) - 2))
+    * np.sqrt(1 / len(x) + (x - x.mean()) ** 2 / np.sum((x - x.mean()) ** 2))
+)
+
+ax.plot(x, p[0] * x + p[1], color=colors["best"])
+ax.fill_between(
+    x, p[0] * x + p[1] - ci, p[0] * x + p[1] + ci, alpha=0.2, color=colors["best"]
+)
+
+#############
+
+ax.set_xticks(np.arange(1974, 2025, 10))
+ax.spines["bottom"].set_bounds(1974, 2024)
+ax.xaxis.set_major_formatter(mticker.FormatStrFormatter("%d"))
+ax.set_xlabel("year")
+ax.set_ylabel(r"$T$ / K")
+ax.tick_params(axis="x", rotation=0)
+ax.legend(fontsize=8, ncol=1)
+ax.set_yticks(
+    [
+        np.around(ship_data["gate"][Tfld][2], 2),
+        np.round(ship_data["orcestra"][Tfld][2], 2),
+    ]
+)
+
+sn.despine(offset=0, ax=ax)
+
+plt.tight_layout()
+plt.savefig("plots/pirata_linear_fit_ci.pdf", bbox_inches="tight", dpi=300)
+plt.show()
+
+# %%

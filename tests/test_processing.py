@@ -43,12 +43,11 @@ def test_sel_percusion_E():
             "launch_lon": (
                 ["sonde"],
                 [
-                    -25.0,
                     -30,
                     -22,
                 ],
             ),
-            "launch_lat": (["sonde"], [4, 10, 8]),
+            "launch_lat": (["sonde"], [ 10, 8]),
         },
     )
     xr.testing.assert_equal(result, expected)

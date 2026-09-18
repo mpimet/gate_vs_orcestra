@@ -89,9 +89,6 @@ def adiabat(
 
     return TPq
 
-
-fpath = "/Users/m219063/work/data/orcestra/gate/aircraft"
-
 cpd = constants.cpd
 Rd = constants.Rd
 Rv = constants.Rv
@@ -165,7 +162,7 @@ find_x_vec = np.vectorize(find_x)
 # - get halo data
 halo = (
     xr.open_dataset(
-        "ipfs://bafybeif52irmuurpb27cujwpqhtbg5w6maw4d7zppg2lqgpew25gs5eczm",
+        f"ipfs://{cids['halo']}",
         engine="zarr",
     )
     .rename_vars(
@@ -212,7 +209,7 @@ for ra, ds in (dus.open_gate_ras(dus.get_cids())).items():
             f"  Min lat {ds.lat.min().values:.1f} degN, min temperature {ta_vals.min():.1f} K"
         )
         print(
-            f"  Mean lat {ds.lat.mean().values:.1f} degN, {p_vals.max() / 100:.1f} hPa - {p_vals.min() / 100:.1f} hPa"
+            f"  Median lat {ds.lat.median().values:.1f} degN, {p_vals.max() / 100:.1f} hPa - {p_vals.min() / 100:.1f} hPa"
         )
         ftime = pd.Timestamp(ds.time.min().values.item())
         print(f"  first flight: {pd.Timestamp(ds.time.min().values.item()):%Y-%m-%d}")
@@ -225,6 +222,9 @@ for ra in ra_dsd.keys():
     da.plot.scatter(label=ra, s=50)
 plt.legend()
 sns.despine(offset=10)
+
+# %%
+halo.latitude.median()
 
 # %%
 # -- get moist adiabats
@@ -598,5 +598,3 @@ plt.legend(fontsize=8)
 fig.tight_layout()
 
 fig.savefig("plots/flight-dropsonde-temperature.pdf")
-
-# %%

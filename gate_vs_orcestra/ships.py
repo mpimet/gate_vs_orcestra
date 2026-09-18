@@ -9,38 +9,29 @@ import matplotlib.pyplot as plt
 
 # %%
 # - process or load ship data
-reprocess_ships = False
-ships = {
-    "dallas": "DALLAS",
-    "faye": "FAYE",
-    "gilliss": "JAMES_M_GILLISS",
-    "researcher": "RESEARCHER",
-    "meteor-gate": "METEOR",
-    "planet": "PLANET",
-}
-datasets = {}
-for ship, path in ships.items():
-    fname = f"../data/rvs/{ship}.zarr"
-    if reprocess_ships:
-        files = sorted(
-            glob.glob(f"/Users/m219063/work/data/orcestra/GATE_v3/DSHIP/{path}/*.nc")
-        )
-        xs = []
-        for file in files:
-            xs.append(xr.open_dataset(file))
-        ds = xr.concat(xs, dim="time").drop_duplicates(dim="time").sortby("time")
-        ds.to_zarr(fname, mode="w")
-    datasets[ship] = xr.open_dataset(fname, engine="zarr")
 
-datasets["meteor"] = xr.open_dataset(
-    "ipfs://bafybeib5awa3le6nxi4rgepn2mwxj733aazpkmgtcpa3uc2744gxv7op44",
-    engine="zarr",
-)
+ships = [
+    "dallas",
+    "faye",
+    "gilliss",
+    "researcher",
+    "meteor-gate",
+    "planet",
+]
+cids = dus.get_cids()
+datasets = {}
+for ship in ships:
+    if isinstance(cids.get(ship), str):
+        datasets[ship] = xr.open_dataset(f"ipfs://{cids.get(ship)}", engine="zarr")
+    else:
+        dss = [xr.open_dataset(f"ipfs://{cid}", engine="zarr") for cid in cids.get(ship)]
+        datasets[ship] = xr.concat(dss, dim="time")
+
 # %%
 # - calculate sst median values and Ts offsets
 cids = dus.get_cids()
 ships = {
-    "gate": dus.open_meteor2(path="../data/rvs/meteor-gate.zarr").pipe(
+    "gate": dus.open_meteor2(path=f"ipfs://{cids['meteor-gate']}").pipe(
         pre.sel_gate_A, item_var="time", lon_var="lon", lat_var="lat"
     ),
     "orcestra": dus.open_meteor3(cids["meteor3"]).pipe(
