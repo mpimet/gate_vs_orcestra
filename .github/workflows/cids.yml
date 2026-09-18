@@ -2,11 +2,9 @@ name: check_cids
 
 on:
   push:
-    paths:
-      - 'gate_vs_orcestra/utilities/data_utils.py'
+    branches:
+    - main
   pull_request:
-    paths:
-      - 'gate_vs_orcestra/utilities/data_utils.py'
 
 jobs:
   test-cids:
