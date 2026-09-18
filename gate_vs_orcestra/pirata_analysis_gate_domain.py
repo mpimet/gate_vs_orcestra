@@ -21,7 +21,7 @@ pirata = pp.get_pirata()
 
 cids = dus.get_cids()
 ships = {
-    "gate": dus.open_meteor2().pipe(
+    "gate": dus.open_meteor2(f"ipfs://{cids["meteor-gate"]}").pipe(
         pp.sel_gate_A, item_var="time", lon_var="lon", lat_var="lat"
     ),
     "orcestra": dus.open_meteor3(cids["meteor3"]).pipe(
