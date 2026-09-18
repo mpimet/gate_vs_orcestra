@@ -162,7 +162,7 @@ find_x_vec = np.vectorize(find_x)
 # - get halo data
 halo = (
     xr.open_dataset(
-        "ipfs://bafybeif52irmuurpb27cujwpqhtbg5w6maw4d7zppg2lqgpew25gs5eczm",
+        f"ipfs://{cids['halo']}",
         engine="zarr",
     )
     .rename_vars(
