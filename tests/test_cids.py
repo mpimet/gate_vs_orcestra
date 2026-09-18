@@ -8,14 +8,6 @@ def cids():
     return data.get_cids()
 
 
-# def test_open_dropsondes(cids):
-#    ds = data.open_dropsondes(cids["dropsondes"])
-#    assert isinstance(ds, xr.Dataset)
-#    assert "launch_lat" in ds.coords
-#    assert "launch_lon" in ds.coords
-#    assert "altitude" in ds.dims
-
-
 def test_open_radiosondes(cids):
     ds = data.open_radiosondes(cids["radiosondes"])
     assert isinstance(ds, xr.Dataset)
@@ -30,3 +22,18 @@ def test_open_gate(cids):
     assert "launch_lat" in ds.coords
     assert "launch_lon" in ds.coords
     assert "altitude" in ds.dims
+
+
+def test_open_all(cids):
+    failed = []
+    for name, cid in cids.items():
+        if name == "orcestra":
+            continue # Skip ORCESTRA HEAD CID
+
+        try:
+            xr.open_dataset(f"ipfs://{cid}", engine="zarr")
+        except:
+            failed.append(name)
+
+    if failed:
+        raise Exception(f"Could not retrieve the following datasets: {failed}")
