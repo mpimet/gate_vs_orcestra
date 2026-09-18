@@ -42,3 +42,7 @@ dependencies = [
 pythonpath = [
   ".", "gate_vs_orcestra",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
