@@ -1,6 +1,7 @@
 import xarray as xr
 import gate_vs_orcestra.utilities.data_utils as data
 import pytest
+import zarr
 
 
 @pytest.fixture
@@ -32,8 +33,12 @@ def test_open_all(cids):
 
         try:
             xr.open_dataset(f"ipfs://{cid}", engine="zarr")
-        except:
-            failed.append(name)
+        except zarr.errors.GroupNotFoundError:
+            try:
+                for id in cid:
+                    xr.open_dataset(f"ipfs://{id}", engine="zarr")
+            except:
+                failed.append(name)
 
     if failed:
         raise Exception(f"Could not retrieve the following datasets: {failed}")
