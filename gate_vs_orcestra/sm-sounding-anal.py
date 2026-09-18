@@ -89,7 +89,6 @@ def adiabat(
 
     return TPq
 
-
 cpd = constants.cpd
 Rd = constants.Rd
 Rv = constants.Rv
