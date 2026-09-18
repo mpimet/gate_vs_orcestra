@@ -129,6 +129,22 @@ def get_cids():
         "RA_DC7_1S": "bafybeiezefd7zugmlhuupaj2ltzoxkbybelzlzxf4dsbdmr6eltvep7et4",
         "RA_UK_Hercules_XV208_100F": "bafybeiezrs252fciepksm2wby3vciwoz5ierdlxqijgrf3cer6yiqpc3wy",
         "RA_NASA_Convair_990": "bafybeieykyhcnns4f52z6lqg62jrp47imfjrfqu7zefcjyszrkh56qacqu",
+        "dallas":["bafybeiac5k7cnzp56lqivzp2iy4hs2ztjpohtruoygbihkantdqrbdtavu",
+                  "bafybeib3te2yt7pkodkllivlw5ox4aaifh5yi56fzsbt3lfbuc55zqyefm",
+                  "bafybeiflavnoniy5rx7xvdxsu6bayrarlqdtjqd7uecfzemjz6pnnbsk3y",
+                  "bafybeibgtnnadhmcdrvy4izdsgncmzqhl5bztcpeutb2i7o6ufg5dkhatq"],
+        "faye":["bafybeihahfpqsu7bvg2t5r7go6do6aggb5g6pz4p7oc5uhq6frihqldcnm",
+                "bafybeic5elbr47dj2mzxuwe6r7xojyt2fmu4kmjraqgrfzch34ygutwcvu"],
+        "gilliss":["bafybeia6v5oamtynxnqq2hrtq27t4364xjs2kf2cbjoowza47uyw4gh32e",
+                   "bafybeibersvcslljz6oxpgalen2vwtn72g6k363xoqiv2wg3myugu4e5ku",
+                   "bafybeid7kfvlsfium55srzebk5jwjx3566nzoviafei5uuchacfsmm3hxy",
+                   "bafybeiayrpmw6e7zd5w3vyzkjniihgqdjvz7ku33gckt5iz3wz3h3mrbwi"],
+        "researcher":["bafybeidzpd5upvnylpqr247u6btltu3nueukwys7marxv2k24ntopj5iou",
+                      "bafybeih6t6dfjazjidoeutnlpn3yt6phfysddno3izyc4wqrl7gpkx36eu",
+                      "bafybeiclwv6miedtvnvml3w5y3oh7amr55pkpjndszp6m34kytyuclprxe",
+                      "bafybeibf5gpvvzcesmhw6fu2ssxyiixc3lb7gxozp4kl7n5scl6lgzbqc4"],
+        "meteor-gate":"bafybeia245wg2a3r3oet7qpuwiignzzsfg4t23w3w7pnqfgvoa4jip3pam",
+        "planet":"bafybeifqht6q7hhaj3uwd5fpfwe7j624yzhobksigrvpj7oxuwljftabpq",
     }
 
 
