@@ -89,9 +89,6 @@ def adiabat(
 
     return TPq
 
-
-fpath = "/Users/m219063/work/data/orcestra/gate/aircraft"
-
 cpd = constants.cpd
 Rd = constants.Rd
 Rv = constants.Rv
