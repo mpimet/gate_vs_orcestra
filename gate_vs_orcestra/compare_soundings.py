@@ -210,9 +210,9 @@ dlim = (295, 375)
 # temperature profiles and adiabats
 kwargs = {"ax": ax[0], "y": "altitude", "ylim": ylim, "xlim": (185, 200)}
 for key, label in [
-    ("rapsodi", "ORCESTRA-RS"),
-    ("gate", "GATE-RS"),
-    ("beach", "ORCESTRA-DS"),
+    ("rapsodi", "ORCESTRA (Meteor)"),
+    ("gate", "GATE"),
+    ("beach", "ORCESTRA (HALO)"),
 ]:
     sonde_means[key].ta.plot(c=set.colors[key], ls="-", label=label, **kwargs)
 
@@ -244,9 +244,9 @@ sns.despine(ax=ax[0], offset={"bottom": 0, "left": 10})
 kwargs = {"ax": ax[1], "y": "altitude", "ylim": ylim, "xlim": (0, 0.015)}
 
 for key, label in [
-    ("rapsodi", "ORCESTRA-RS"),
-    ("gate", "GATE-RS"),
-    ("beach", "ORCESTRA-DS"),
+    ("gate", "GATE"),
+    ("beach", "ORCESTRA (HALO)"),
+    ("rapsodi", "ORCESTRA (Meteor)"),
 ]:
     sonde_means[key].sel(altitude=slice(20, 15300)).n2.plot(
         c=set.colors[key], ls="-", label=label, **kwargs
@@ -308,7 +308,7 @@ ax[2].fill_betweenx(
 )
 ax[2].axvline(0, color="grey", lw=0.5, ls="--")
 ax[2].plot([-1, -2.5], [21.0e3, 23e3], color="grey", lw=0.5, ls="-")
-ax[2].annotate("RCE", xy=(-2.8, 21200), color="k", fontsize=8)
+ax[2].annotate("RCE", xy=(-4, 22000), color="grey", fontsize=8)
 ax[2].annotate(
     "$z_0$",
     xy=(-2, z_T0.quantile(0.5)),
