@@ -37,7 +37,7 @@ def test_open_all(cids):
             try:
                 for id in cid:
                     xr.open_dataset(f"ipfs://{id}", engine="zarr")
-            except:
+            except Exception:
                 failed.append(name)
 
     if failed:
