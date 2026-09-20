@@ -29,7 +29,7 @@ def test_open_all(cids):
     failed = []
     for name, cid in cids.items():
         if name == "orcestra":
-            continue # Skip ORCESTRA HEAD CID
+            continue  # Skip ORCESTRA HEAD CID
 
         try:
             xr.open_dataset(f"ipfs://{cid}", engine="zarr")
