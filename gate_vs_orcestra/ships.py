@@ -1,6 +1,5 @@
 # %%
 # - plot sst and air temperatures from ships
-import glob
 import xarray as xr
 import utilities.preprocessing as pre
 import utilities.data_utils as dus
