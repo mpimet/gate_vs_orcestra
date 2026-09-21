@@ -23,7 +23,9 @@ for ship in ships:
     if isinstance(cids.get(ship), str):
         datasets[ship] = xr.open_dataset(f"ipfs://{cids.get(ship)}", engine="zarr")
     else:
-        dss = [xr.open_dataset(f"ipfs://{cid}", engine="zarr") for cid in cids.get(ship)]
+        dss = [
+            xr.open_dataset(f"ipfs://{cid}", engine="zarr") for cid in cids.get(ship)
+        ]
         datasets[ship] = xr.concat(dss, dim="time")
 
 # %%
