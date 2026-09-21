@@ -47,7 +47,7 @@ kwargs = {"transform": ccrs.PlateCarree(), "marker": "o"}
 ax.scatter(
     gs_PE.launch_lon,
     gs_PE.launch_lat,
-    s=1,
+    s=2,
     color=colors["gate"],
     alpha=0.5,
     label=f"GATE (n={ngso})",
@@ -56,46 +56,19 @@ ax.scatter(
 ax.scatter(
     rs_PE.launch_lon,
     rs_PE.launch_lat,
-    s=1,
+    s=4,
     color=colors["rapsodi"],
     alpha=0.5,
-    label=f"ORCESTRA (Meteor, n={nrso})",
+    label=f"ORCESTRA (R/V Meteor, n={nrso})",
     **kwargs,
 )
 ax.scatter(
     bs_PE.launch_lon,
     bs_PE.launch_lat,
-    s=1,
+    s=4,
     color=colors["beach"],
     alpha=0.5,
     label=f"ORCESTRA (HALO, n={nbso})",
-    **kwargs,
-)
-ax.scatter(
-    gs_GA.launch_lon,
-    gs_GA.launch_lat,
-    s=4,
-    color=colors["gate"],
-    alpha=0.5 / 3,
-    label=f"GATE (n={ngs})",
-    **kwargs,
-)
-ax.scatter(
-    rs_GA.launch_lon,
-    rs_GA.launch_lat,
-    s=4,
-    color=colors["rapsodi"],
-    alpha=0.5,
-    label=f"ORCESTRA (Meteor, n={nrs})",
-    **kwargs,
-)
-ax.scatter(
-    bs_GA.launch_lon,
-    bs_GA.launch_lat,
-    s=4,
-    color=colors["beach"],
-    alpha=0.5,
-    label=f"ORCESTRA (HALO, n={nbs})",
     **kwargs,
 )
 
@@ -141,17 +114,7 @@ ax.plot(percusion_E[2:, 0], percusion_E[2:, 1], color="k", lw=1, ls="solid")
 ax.plot(itcz[:2, 0], itcz[:2, 1], color="k", lw=1, ls="dotted")
 ax.plot(itcz[2:, 0], itcz[2:, 1], color="k", lw=1, ls="dotted")
 
-h_g1 = mlines.Line2D(
-    [],
-    [],
-    color=colors["gate"],
-    marker="o",
-    linestyle="None",
-    markersize=3,
-    alpha=0.3,
-    label=f"GATE ($n=$ {ngs})",
-)
-h_g2 = mlines.Line2D(
+h_g = mlines.Line2D(
     [],
     [],
     color=colors["gate"],
@@ -159,19 +122,9 @@ h_g2 = mlines.Line2D(
     linestyle="None",
     markersize=1,
     alpha=0.75,
-    label=f"GATE ($n=$ {ngso})",
+    label=f"GATE, $n=$ {ngs}, {ngso}",
 )
-h_r1 = mlines.Line2D(
-    [],
-    [],
-    color=colors["rapsodi"],
-    marker="o",
-    linestyle="None",
-    markersize=3,
-    alpha=0.9,
-    label=f"METEOR ($n=${nrs})",
-)
-h_r2 = mlines.Line2D(
+h_r = mlines.Line2D(
     [],
     [],
     color=colors["rapsodi"],
@@ -179,19 +132,9 @@ h_r2 = mlines.Line2D(
     linestyle="None",
     markersize=1,
     alpha=0.9,
-    label=f"METEOR ($n=${nrso})",
+    label=f"ORCESTRA (Meteor), $n=${nrs}, {nrso}",
 )
-h_b1 = mlines.Line2D(
-    [],
-    [],
-    color=colors["beach"],
-    marker="o",
-    linestyle="None",
-    markersize=3,
-    alpha=0.9,
-    label=f"HALO ($n=${nbs})",
-)
-h_b2 = mlines.Line2D(
+h_b = mlines.Line2D(
     [],
     [],
     color=colors["beach"],
@@ -199,10 +142,10 @@ h_b2 = mlines.Line2D(
     linestyle="None",
     markersize=1,
     alpha=0.9,
-    label=f"HALO ($n=${nbso})",
+    label=f"ORCESTRA (HALO), $n=${nbs}, {nbso}",
 )
 
-h_p1 = mlines.Line2D(
+h_p = mlines.Line2D(
     [],
     [],
     color=colors["pirata12"],
@@ -213,24 +156,13 @@ h_p1 = mlines.Line2D(
     label="PIRATA (-23˚E, 12˚N)",
 )
 
-h_p2 = mlines.Line2D(
-    [],
-    [],
-    color=colors["pirata4"],
-    marker="*",
-    linestyle="None",
-    markersize=5,
-    alpha=1,
-    label="PIRATA (-23˚E, 4˚N)",
-)
-
 ax.legend(
-    bbox_to_anchor=(-0.15, 1.10),
-    title="ORCESTRA East              GATE A/B             ",
-    ncol=2,
+    bbox_to_anchor=(0.05, 0.975),
+    title="",
+    ncol=1,
     loc="upper left",
     framealpha=1,
-    handles=[h_g2, h_b2, h_r2, h_p1, h_g1, h_b1, h_r1],
+    handles=[h_g, h_b, h_r],
     fontsize=8,
 )
 
